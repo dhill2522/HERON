@@ -5,12 +5,14 @@
 # from marginal import marginal
 # from custom import Custom
 from .pyomo_dispatch import Pyomo
+from .pyoptsparse_dispatch import PyOptSparse
 
 known = {
     #'generic': Generic,
     #'marginal': Marginal,
     #'custom': Custom,
     'pyomo': Pyomo,
+    'pyoptsparse': PyOptSparse
 }
 
 def get_class(typ):
