@@ -14,7 +14,7 @@
   </TestInfo>
 
   <Case name="Sweep_Runs">
-    <num_arma_samples>2</num_arma_samples>
+    <num_arma_samples>1</num_arma_samples>
     <time_discretization>
       <time_variable>Time</time_variable>
       <end_time>2</end_time>
@@ -66,10 +66,7 @@
           <fixed_value>-100</fixed_value>
         </capacity>
         <transfer>
-          <linear>
-            <rate resource="steam">-1</rate>
-            <rate resource="electricity">0.5</rate>
-          </linear>
+          <Function method="generator">transfers</Function>
         </transfer>
       </produces>
       <economics>

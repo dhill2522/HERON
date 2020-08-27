@@ -1,4 +1,5 @@
 from .Dispatcher import Dispatcher
+from .DispatchState import NumpyState
 from pprint import pprint
 from typing import List
 import pyoptsparse
@@ -34,178 +35,78 @@ class PyOptSparse(Dispatcher):
   def read_input(self, specs):
     print('\n\n\n\nPyOptDispatch:read_input - specs: ', specs)
 
-  def _build_pools(self):
-    '''Assemble the resource pools including producing, consuming
-    and storing components. Only used for pool method.
-    Cannot be called before self.dispatch'''
-    pool_dict = {
-      'producers': [],
-      'consumers': [],
-      'storers': []
-    }
-    pools = {r: pool_dict for r in self.resources}
+  def __gen_pool_cons(self, res):
+    '''A closure for generating a pool constraint for a resource'''
 
-    for res, pool in pools.items():
+    def pool_cons(dispatch_window: NumpyState):
+      '''A resource pool constraint
 
-      for c in self.components:
-        if res in c.get_inputs():
-          pool['consumers'].append(c)
-        if res in c.get_outputs():
-          pool['producers'].append(c)
-        # FIXME: Add tracking for storers
-    return pools
+      Ensures that the net amount of a resource being consumed, produced and
+      stored is zero. Inteded to '''
+      time = dispatch_window._times
+      n = len(time)
+      err = np.zeros(n)
 
-  def _build_graph(self):
-    '''
-    Build a graph of the components and the connections between them
-    based on the resources consumed, stored or produced.
-    '''
-    graph = {c.name: [] for c in self.components}
+      # FIXME: This is an inefficient way of doing this. Find a better way
+      cs = [c for c in self.components if res in c.get_resources]
+      for i, t in enumerate(time):
+        for c in cs:
+          err[i] += dispatch_window.get_activity(c, res, t)
 
-    # Iterate over the resources
-    for r in self.resources:
-      producers = []
-      consumers = []
-      storers = []
-      # make a list of the producers and consumers for the resource
-      for c in self.components:
-        if r in c.get_inputs():
-          consumers.append(c)
-        if r in c.get_outputs():
-          producers.append(c)
-        # FIXME: Add a method for handling storage
+      # FIXME: This simply returns the sum of the errors over time. There
+      # are likely much better ways of handling this.
+      return sum(err)
 
-      # Make connections in the graph
-      for s in storers:
-        graph[s.name].append(s.name)
-      for p in producers:
-        for c in consumers:
-          graph[p.name].append(c.name)
-    return graph
+    return pool_cons
 
-  def _get_component(self, name: str):
-    for c in self.components:
-      if c.name == name:
-        return c
-    return
+  def _build_pool_cons(self):
+    '''Build the pool constraints
+    Returns a list of `pool_cons` functions, one for each resource.'''
 
-  def _find_var_groups(self):
-    '''Find variable groups for the optimizer.
-    These variables, together with any fixed dispatch should fully-
-    specify the state of the system.
-    '''
-    vs = {}
-
-    for c in self.components:
-      if c.is_dispatchable() == 'independent':
-        # Independently dispatched components are automatically vars
-        # FIXME: Set better upper/lower bounds on the var group
-        # Note that they could be given by a ValuedParam
-        vs[c.name] = [0, 1]
-
-      consumers = [self._get_component(comp) for comp in self.graph[c.name]]
-      for p in c.get_outputs():
-        iNum = 0
-        res_cons = list(filter(lambda x: p in x.get_inputs(), consumers))
-        for _ in range(len(res_cons) - 1):
-          vs[f'{c.name}_{p}_{iNum}'] = [0, 1]
-          # FIXME: Add constraints to ensure that the resource is conserved
-          # accross the routing point
-          iNum += 1
-    return vs
-
-  def _find_dispatchable(self, activities, to_dispatch):
-    '''Find a component that is ready to be dispatched.
-    This means that all the necessary inputs have been determined.'''
-
-    for c in to_dispatch:
-      # First dispatch those that have no inputs
-      if len(c.get_inputs()) > 1:
-        return c
-
-      # Next check to see if all the input activities are supplied
-      c_act = activities[c.name]
-      supplied = True
-      for r in c.get_inputs():
-        if not c_act[r]:
-          supplied = False
-      if supplied:
-        return c
-
-    # FIXME: Should raise an error if only non-dispatchable components remain.
-
-  def build_simulation(self):
-    '''Build the simulation function. It determines all the activities of all
-    components based on the variable groups.'''
-    def simulation(x, meta, time):
-      # Get the list of components to dispatch
-      to_dispatch = self.components.copy()
-
-      # Initialize the activity arrays
-      activities = {}
-      for c in self.components:
-        activities[c.name] = {r: [] for r in c.get_resources()}
-
-      # Dispatch the independent components
-      # FIXME: Figure this part out or handle it below.
-      # for c in to_dispatch:
-      #   if c.is_dispatchable() == 'independent':
-      #     activities[c.name] =
-
-      while to_dispatch:
-        # Get a component to dispatch
-        c = self._find_dispatchable(activities, to_dispatch)
-
-
-        # FIXME: This should never happen once the full dispatch is in place!
-        if not c:
-          break
-
-        print(f'Dispatching {c.name}...')
-
-        if c.is_dispatchable() == 'independent':
-          for key in x[c.name]:
-            activities[c.name][key] = x[c.name][key]
-        elif c.is_dispatchable() == 'fixed':
-          for key in meta[c.name]:
-            activities[c.name][key] = meta[c.name][key]
-
-        if c.get_outputs():
-          # FIXME: run transfer function
-          if c.get_inputs():
-            inputs = {key: val for (key, val) in activities[c.name].items() if key in c.get_inputs()}
-
-          # FIXME: assign activities to downstream components
-
-        to_dispatch.remove(c)
-
-      return activities
-    return simulation
-
-  def _obj_pool(self, x, components, meta):
-    activities = {c.name: {} for c in components}
-
-    for c in components:
-      if c.is_dispatchable == 'fixed':
-        # FIXME: Pull the dispatch from the component
-        activities[c.name][c.cap_res] = 100
-
-    # FIXME: Will likely need to turn this into a closure anyway to encapsulate the scope
+    cons = []
+    for res in self.resources:
+      # Generate the pool constraint here
+      pool_cons = self.__gen_pool_cons(res)
+      cons.append(pool_cons)
+    return cons
 
   def _dispatch_pool(self, case, components, sources, meta):
+    # Steps:
+    #   1) Assemble all the vars into a vars dict
+    #     A set of vars for each dispatchable component including storage elements
+    #     include bound constraints
+    #   2) Build the pool constraint functions
+    #     Should have one constraint function for each pool
+    #     Each constraint will be a function of all the vars
+    #   3) Assemble the transfer function constraints
+    #   4) Set up the objective function as the double integral of the incremental dispatch
+    #   5) Assemble the parts for the optimizer function
+    #     a) Declare the variables
+    #     b) Declare the constraints
+    #     c) Declare the objective function
+    #     d) set the optimization configuration (IPOPT/SNOPT, CS/FD...)
+    #   6) Run the optimization and handle failed/unfeasible runs
+    #   7) Set the activities on each of the components and return the result
+
     print('\n\n\n\nPyOptDispatch:dispatch pool - components: ', components)
-    print('case:', case)
+    print('case:', dir(case))
     print('sources:', sources)
     print('meta:', meta)
 
     self.components = components
     self.case = case
     self.resources = hutils.get_all_resources(components)
-    n = 25  # number of time steps
-    # This will be replaced with info from Heron once it is implemented
-    t = np.linspace(0, 24, n)
 
-    # Find the vars - 1 for each component input where dispatch is not fixed
+    # The time discretization for the dispatch is provided by the dispatch manager
+    t_begin, t_end, t_num = self.get_time_discr()
+    time = np.linspace(t_begin, t_end, t_num)
+    print('time: ', time)
+    resource_index_map = meta['HERON']['resource_indexer']
+
+    #n = min(24, t_num) # FIXME: should find a way of getting this from the user
+    # FIXME: Will need to implement rolling window dispatch soon
+
+    # Step 1) Find the vars: 1 for each component input where dispatch is not fixed
     vs = {} # Min/Max tuples of the various input
     for c in components:
       if c.is_dispatchable() == 'fixed':
@@ -213,84 +114,92 @@ class PyOptSparse(Dispatcher):
         continue
       else: # Independent and dependent dispatch
         vs[c.name] = {}
-        for r in c.get_inputs():
-          vs[c.name][r] = (c.produce_min, c.produce_max)
+        cap_res = c.get_capacity_var()
+        capacity = c.get_capacity(None, None, None, None)
+        # print('capacity', c.name, cap_res, capacity)
+        vs[c.name] = [0, capacity[0][cap_res]] # FIXME: get real min capacity
+        vs[c.name].sort() # The max capacities are often negative
+        # print('capacity bounds are:', vs[c.name])
 
-    # Dispatch all the components - assume inputs are supplied, calculate outputs
+    # Step 2) Build the resource pool constraint functions
+    print('Step 2) Build the resource pool constraints')
+    pool_cons = self._build_pool_cons()
+
+    # Step 3) Assemble the transfer function constraints
+    trans_cons = [] # FIXME: actually do it for real...
+
+    # Step 4) Set up the objective function as the doible integral of the incremental dispatch
+    print('Step 4) Assembling the big function')
+    def obj(stuff):
+      inner_meta = meta
+      # Initialize the dispatch
+      dispatch = NumpyState()
+      dispatch.initialize(components, resource_index_map, time)
+
+      # Dispatch the fixed components
+      fixed_comps = [c for c in components if c.is_dispatchable() == 'fixed']
+      for f in fixed_comps:
+        resource = f.get_capacity_var()
+        capacity = f.get_capacity(None, None, None, None)[0][resource]
+        vals = np.ones(len(time)) * capacity
+        # FIXME: Update the time indexes for rolling window dispatch
+        dispatch.set_activity_vector(f, f.get_capacity_var(), 0, len(time), vals)
+
+      # Dispatch the independent and dependent components using the vars
+      disp_comps = [c for c in components if c.is_dispatchable() != 'fixed']
+      for d in disp_comps:
+        inter = d.get_interaction()
+        # FIXME: Update the time indexes for rolling window dispatch
+        for i in range(len(time)):
+          request = {d.get_capacity_var(): stuff[d.name][i]}
+          bal, inner_meta = inter.produce(request, inner_meta, sources, dispatch, i)
+          for res, value in bal.items():
+            dispatch.set_activity_indexed(d, resource_index_map[d][res], i, value)
+
+      # At this point the dispatch should be fully determined, so assemble the return object
+      things = {}
+      # Dispatch the components to generate the obj val
+      # FIXME: should probably use inner_meta here?
+      things['objective'] = self._compute_cashflows(self.components, dispatch, time, meta)
+      # Run the transfer function constraints
+      things['transfer_functions'] = 0 # FIXME
+      # Run the resource pool constraints
+      things['resource_balance'] = [cons(dispatch) for cons in pool_cons]
+      return things
+
+    # Step 5) Assemble the parts for the optimizer function
+    print('Step 5) Setting up pyOptSparse')
+    optProb = pyoptsparse.Optimization(case.name, obj)
+    for comp in vs.keys():
+      for comp, bounds in vs.items():
+        # FIXME: will need to find a way of generating the guess values
+        optProb.addVarGroup(comp, t_num, 'c', lower=bounds[0], upper=bounds[1])
+    optProb.addConGroup('resource_balance', len(pool_cons), lower=0, upper=0)
+    optProb.addConGroup('tansfer_functions', len(trans_cons), lower=0, upper=0)
+    optProb.addObj('objective')
+
+    # Step 6) Run the optimization
+    opt = pyoptsparse.OPT('IPOPT')
+    sol = opt(optProb, sens='CD')
+    print(sol)
+    # FIXME: Raise error if failed to converge
+
+    # Step 7) Set the activities on each component
+    optDispatch = NumpyState()
+    optDispatch.initialize(components, resource_index_map, time)
+    for c in components:
+      # optDispatch.set_activity_vector(c, res, start_time, end_time, vals)
+      pass
 
 
-    # Add constraints for each resources - net must be zero
-    # Optimize subject to constraints
-    # Return the optimal dispatch
+    print('\nSuccessfully completed dispatch\n\n\n')
+    return optDispatch
 
-    c = components[1]
-    print(dir(c))
-    print(f'Dispatching {c.name}...')
-    # transfer = c.get_interaction().get_transfer()
-    # print(transfer, transfer.type, dir(transfer))
-    print(c.produce([50], meta, sources, [50], [1]))
-
-
-
-  def _dispatch_tree(self, case, components, sources, meta):
-    self.components = components
-    self.case = case
-    self.resources = hutils.get_all_resources(components)
-
-    n  = 25 # number of time steps
-    # This will be replaced with info from Heron once it is implemented
-    time = np.linspace(0, 24, n)
-
-    print('\n\n\n\nPyOptDispatch:dispatch tree - components: ', components)
-
-    # The Pool-based method
-    # # Build the pools
-    # self.pools = self._build_pools()
-    # print('Pools:', self.pools)
-
-    # Graph-based method
-    self.graph  = self._build_graph()
-    print('graph: ', self.graph)
-    print('var_groups:', self._find_var_groups())
-
-    print('\nsources', type(sources), sources)
-    print('\nvariables', type(meta), meta)
-
-    sim = self.build_simulation()
-
-    meta = {
-      'steamer': {
-        'steam': np.ones(n) * 100
-      }
-    }
-
-    meta['generator'] = {
-      'steam': np.ones(n)*100
-    }
-
-    c = components[0]
-
-
-    # activities = sim(variables, meta, time)
-    # print(activities)
 
   def dispatch(self, case, components, sources, meta):
     return self._dispatch_pool(case, components, sources, meta)
     # return self._dispatch_tree(case, components, sources, meta)
 
-
-
-
-
-
-    print('\nSuccessfully completed dispatch\n\n\n')
-    return
-
 # Questions:
-# 1. dispatch sets members on self that are later used by _get_resources and _build_graph
-#   Is that ok or should I pass the relevant vars around instead?
 # 3. How should I raise exceptions? What is the raven way?
-# 4. Why do non-independent dispatched components often have a
 
-# Notes:
-# For fixed-dispatch are
