@@ -29,7 +29,6 @@
     </economics>
     <dispatcher>
       <type>pyoptsparse</type>
-      <increment resource="electricity">1e6</increment> <!-- MW -->
     </dispatcher>
   </Case>
 
@@ -66,7 +65,7 @@
           <fixed_value>-100</fixed_value>
         </capacity>
         <transfer>
-          <Function method="generator">transfers</Function>
+	  <Function method="generator">transfers</Function>
         </transfer>
       </produces>
       <economics>
@@ -91,7 +90,7 @@
         </capacity>
       </demands>
       <economics>
-        <lifetime>3</lifetime>
+        <lifetime>30</lifetime>
         <CashFlow name="e_sales" type="repeating" taxable='True' inflation='none' mult_target='False'>
           <driver>
             <Function method="electric_consume">transfers</Function>
@@ -117,7 +116,7 @@
         </capacity>
       </demands>
       <economics>
-        <lifetime>3</lifetime>
+        <lifetime>30</lifetime>
         <CashFlow name="e_sales" type="repeating" taxable='True' inflation='none' mult_target='False'>
           <driver>
             <Function method="electric_consume">transfers</Function>
@@ -132,7 +131,7 @@
   </Components>
 
   <DataGenerators>
-	  <ARMA name='Price' variable="Signal">../ARMA/Sine/arma.pk</ARMA>
+    <ARMA name='Price' variable="Signal">../ARMA/Sine/arma.pk</ARMA>
     <Function name="transfers">transfers.py</Function>
   </DataGenerators>
 

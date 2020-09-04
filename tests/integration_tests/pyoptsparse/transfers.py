@@ -1,16 +1,24 @@
+
+# Copyright 2020, Battelle Energy Alliance, LLC
+# ALL RIGHTS RESERVED
 """
   Implements transfer functions
 """
 
 def electric_consume(data, meta):
-  '''The CashFlow driver function for the electricity market
-  '''
-  # print('electric_consume:', data, meta)
+  ## works with generic?
+  # activity = meta['raven_vars']['HERON_pyomo_model']
+  # t = meta['t']
+  # flip sign because we consume the electricity
+  # E = -1.0 * activity['electricity'][t]
 
-  # FIXME: Get this working right once the dispatch is in place
-  # E = -1 * data['electricity']
-  data = {'driver': -1}
-
+  ## works with pyomo
+  # model = meta['HERON']['pyomo_model']
+  # component = meta['HERON']['component']
+  activity = meta['HERON']['activity']
+  # TODO a get_activity method for the dispatcher -> returns object-safe activity (expression or value)?
+  amount = -1 * activity['electricity']
+  data = {'driver': amount}
   return data, meta
 
 def generator(data, meta):
