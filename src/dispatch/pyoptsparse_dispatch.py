@@ -74,11 +74,10 @@ class PyOptSparse(Dispatcher):
     '''Determine the dispatch from a given set of optimization
     vars by running the transfer functions. Returns a Numpy dispatch
     object'''
-    
     # Initialize the dispatch
     dispatch = NumpyState()
     dispatch.initialize(self.components, self.resource_index_map, time)
-
+    new_meta = meta
     # Dispatch the fixed components
     fixed_comps = [c for c in self.components if c.is_dispatchable() == 'fixed']
     for f in fixed_comps:
@@ -87,7 +86,7 @@ class PyOptSparse(Dispatcher):
       vals = np.ones(len(time)) * capacity
       # FIXME: Update the time indexes for rolling window dispatch
       dispatch.set_activity_vector(f, f.get_capacity_var(), 0, len(time), vals)
-
+    print('determine_dispatch pre:', meta)
     # Dispatch the independent and dependent components using the vars
     disp_comps = [c for c in self.components if c.is_dispatchable() != 'fixed']
     for d in disp_comps:
@@ -95,10 +94,14 @@ class PyOptSparse(Dispatcher):
       # FIXME: Update the time indexes for rolling window dispatch
       for i in range(len(time)):
         request = {d.get_capacity_var(): opt_vars[d.name][i]}
-        bal, meta = inter.produce(request, meta, sources, dispatch, i)
+        bal, meta_stuff = inter.produce(request, meta, sources, dispatch, i)
+        print("meta_stuff['meta']", meta_stuff['meta'])
+        print('Hello')
+        new_meta = meta_stuff['meta']
         for res, value in bal.items():
           dispatch.set_activity_indexed(d, self.resource_index_map[d][res], i, value)
-    return dispatch, meta
+    print('determine_dispatch post:', new_meta)
+    return dispatch, new_meta
 
   def _dispatch_pool(self, case, components, sources, meta):
     # Steps:
@@ -173,6 +176,7 @@ class PyOptSparse(Dispatcher):
       print(stuff)
       nonlocal meta
       dispatch, meta = self.determine_dispatch(stuff, meta, sources, time)
+      print("meta inner:", meta)
       # At this point the dispatch should be fully determined, so assemble the return object
       things = {}
       # Dispatch the components to generate the obj val
