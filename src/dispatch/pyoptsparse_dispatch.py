@@ -1,11 +1,11 @@
 from .Dispatcher import Dispatcher
 from .DispatchState import NumpyState
-from pprint import pprint
 from typing import List
 import pyoptsparse
 import numpy as np
 import sys
 import os
+import traceback
 
 try:
   import _utils as hutils
@@ -75,9 +75,9 @@ class PyOptSparse(Dispatcher):
     vars by running the transfer functions. Returns a Numpy dispatch
     object'''
     # Initialize the dispatch
+    print('starting to determine the dispatch')
     dispatch = NumpyState()
     dispatch.initialize(self.components, self.resource_index_map, time)
-    new_meta = meta
     # Dispatch the fixed components
     fixed_comps = [c for c in self.components if c.is_dispatchable() == 'fixed']
     for f in fixed_comps:
@@ -86,22 +86,20 @@ class PyOptSparse(Dispatcher):
       vals = np.ones(len(time)) * capacity
       # FIXME: Update the time indexes for rolling window dispatch
       dispatch.set_activity_vector(f, f.get_capacity_var(), 0, len(time), vals)
-    print('determine_dispatch pre:', meta)
     # Dispatch the independent and dependent components using the vars
     disp_comps = [c for c in self.components if c.is_dispatchable() != 'fixed']
+    print('interating over comps now')
     for d in disp_comps:
       inter = d.get_interaction()
       # FIXME: Update the time indexes for rolling window dispatch
       for i in range(len(time)):
         request = {d.get_capacity_var(): opt_vars[d.name][i]}
-        bal, meta_stuff = inter.produce(request, meta, sources, dispatch, i)
-        print("meta_stuff['meta']", meta_stuff['meta'])
-        print('Hello')
-        new_meta = meta_stuff['meta']
+        bal, meta = inter.produce(request, meta, sources, dispatch, i)
         for res, value in bal.items():
           dispatch.set_activity_indexed(d, self.resource_index_map[d][res], i, value)
-    print('determine_dispatch post:', new_meta)
-    return dispatch, new_meta
+
+    print('dispatch determined!')
+    return dispatch, meta
 
   def _dispatch_pool(self, case, components, sources, meta):
     # Steps:
@@ -122,18 +120,6 @@ class PyOptSparse(Dispatcher):
     #   7) Set the activities on each of the components and return the result
 
     print('\n\n\n\nPyOptDispatch:dispatch pool - components: ', components)
-    print(dir(components[0]))
-    for c in components:
-      # print out the ValuedParams
-      trans = c.get_interaction().get_transfer()
-      print(c.name, c.is_dispatchable(), dir(trans))
-      if c.is_dispatchable() == 'independent':
-        print('trans_type', trans.type)
-      pass
-    print('case:', dir(case))
-    print('sources:', sources)
-    print('meta:', meta)
-
     self.components = components
     self.case = case
     self.resources = hutils.get_all_resources(components)
@@ -141,7 +127,6 @@ class PyOptSparse(Dispatcher):
     # The time discretization for the dispatch is provided by the dispatch manager
     t_begin, t_end, t_num = self.get_time_discr()
     time = np.linspace(t_begin, t_end, t_num)
-    print('time: ', time)
     self.resource_index_map = meta['HERON']['resource_indexer']
 
     #n = min(24, t_num) # FIXME: should find a way of getting this from the user
@@ -173,17 +158,18 @@ class PyOptSparse(Dispatcher):
     # Step 4) Set up the objective function as the doible integral of the incremental dispatch
     print('Step 4) Assembling the big function')
     def obj(stuff):
-      print(stuff)
+      print('Obj Fun:', stuff)
       nonlocal meta
       dispatch, meta = self.determine_dispatch(stuff, meta, sources, time)
-      print("meta inner:", meta)
       # At this point the dispatch should be fully determined, so assemble the return object
       things = {}
       # Dispatch the components to generate the obj val
+      print('made it this far!')
       things['objective'] = self._compute_cashflows(self.components, dispatch, time, meta)
+      print('am I still visible?')
       # Run the resource pool constraints
       things['resource_balance'] = [cons(dispatch) for cons in pool_cons]
-      print('things: ', things)
+      print('things:', things)
       return things
 
     # Step 5) Assemble the parts for the optimizer function
@@ -192,7 +178,7 @@ class PyOptSparse(Dispatcher):
     for comp in vs.keys():
       for comp, bounds in vs.items():
         # FIXME: will need to find a way of generating the guess values
-        optProb.addVarGroup(comp, t_num, 'c', lower=bounds[0], upper=bounds[1])
+        optProb.addVarGroup(comp, t_num, 'c', value=-1, lower=bounds[0], upper=bounds[1])
     optProb.addConGroup('resource_balance', len(pool_cons), lower=0, upper=0)
     optProb.addObj('objective')
 
@@ -202,13 +188,16 @@ class PyOptSparse(Dispatcher):
       opt = pyoptsparse.OPT('IPOPT')
       sol = opt(optProb, sens='CD')
       print(sol)
+      print('Dispatch optimization successful')
     except Exception as err:
-      print('Dispatch optimization failed:', err)
+      print('Dispatch optimization failed:')
     # FIXME: Raise error if failed to converge
+      traceback.print_exc()
+      raise err
 
     # Step 7) Set the activities on each component
-    print('\nSuccessfully completed dispatch\n\n\n')
-    
+    print('\nCompleted dispatch process\n\n\n')
+
     opt_dispatch, meta = self.determine_dispatch(sol.xStar, meta, sources, time)
     print('\nReturning the results')
     return opt_dispatch
