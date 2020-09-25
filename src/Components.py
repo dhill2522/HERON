@@ -815,12 +815,6 @@ class Producer(Interaction):
     inputs['request'] = request
     inputs['t'] = t
     inputs['dispatch'] = dispatch
-
-    # inputs = {'request': request,
-    #           'meta': meta,
-    #           'raven_vars': raven_vars,
-    #           'dispatch': dispatch,
-    #           't': t}
     balance, meta = self._transfer.evaluate(inputs)
     self.check_expected_present(balance, self.get_resources(), 'TRANSFER FUNCTION {}'.format(self._transfer))
     # OLD if transfer evaluation is a float (float, arma), then it signifies a conversion rate
