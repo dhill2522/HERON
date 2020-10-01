@@ -158,19 +158,15 @@ class PyOptSparse(Dispatcher):
     # Step 4) Set up the objective function as the doible integral of the incremental dispatch
     print('Step 4) Assembling the big function')
     def obj(stuff):
-      print('Obj Fun:', stuff)
       nonlocal meta
       dispatch, meta = self.determine_dispatch(stuff, meta, sources, time)
       # At this point the dispatch should be fully determined, so assemble the return object
       things = {}
       # Dispatch the components to generate the obj val
-      print('made it this far!')
       things['objective'] = self._compute_cashflows(self.components, dispatch, time, meta)
-      print('am I still visible?')
       # Run the resource pool constraints
       things['resource_balance'] = [cons(dispatch) for cons in pool_cons]
-      print('things:', things)
-      return things
+      return things, False
 
     # Step 5) Assemble the parts for the optimizer function
     print('Step 5) Setting up pyOptSparse')

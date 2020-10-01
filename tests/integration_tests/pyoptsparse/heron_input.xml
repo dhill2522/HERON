@@ -66,7 +66,7 @@
           <fixed_value>-100</fixed_value>
         </capacity>
         <transfer>
-	  <Function method="generator">transfers</Function>
+	        <Function method="generator">transfers</Function>
         </transfer>
       </produces>
       <economics>
