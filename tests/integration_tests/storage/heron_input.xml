@@ -1,11 +1,11 @@
 <HERON>
   <TestInfo>
-    <name>validator</name>
+    <name>storage</name>
     <author>talbpaul</author>
-    <created>2020-09-14</created>
+    <created>2020-09-28</created>
     <description>
-      Tests using a ``validator'' to modify behavior of a dispatch optimizer. Uses the Example
-      validator.
+      Tests including a storage unit as part of a flexible analysis case. Extends from
+      production\_flex case.
     </description>
     <classesTested>HERON</classesTested>
   </TestInfo>
@@ -28,11 +28,6 @@
     <dispatcher>
       <type>pyomo</type>
     </dispatcher>
-    <validator>
-      <Example>
-        <delta>0.2</delta>
-      </Example>
-    </validator>
   </Case>
 
   <Components>
@@ -47,11 +42,25 @@
       </economics>
     </Component>
 
+    <Component name="steam_storage">
+      <stores resource="steam" dispatch="independent">
+        <capacity resource="steam">
+          <fixed_value>100</fixed_value>
+        </capacity>
+        <initial_stored>
+          <fixed_value>1</fixed_value>
+        </initial_stored>
+      </stores>
+      <economics>
+        <lifetime>10</lifetime>
+      </economics>
+    </Component>
+
     <Component name="generator">
       <produces resource="electricity" dispatch="independent">
         <consumes>steam</consumes>
         <capacity resource="steam">
-          <fixed_value>-100</fixed_value>
+          <fixed_value>-99</fixed_value>
         </capacity>
         <transfer>
           <linear>
@@ -68,7 +77,6 @@
     <Component name="electr_market">
       <demands resource="electricity" dispatch="dependent"><!---->
         <capacity>
-          <!-- <fixed_value>-2</fixed_value> -->
           <fixed_value>-2</fixed_value>
         </capacity>
       </demands>
@@ -85,6 +93,7 @@
         </CashFlow>
       </economics>
     </Component>
+
 
     <Component name="electr_flex">
       <demands resource="electricity" dispatch="dependent">
