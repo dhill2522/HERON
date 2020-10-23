@@ -46,6 +46,24 @@ class Case(Base):
     input_specs.addParam('name', param_type=InputTypes.StringType, required=True,
         descr=r"""the name by which this analysis should be referred within HERON.""")
 
+    # Optional Identifier Nodes
+    label_specs = InputData.parameterInputFactory(
+        name='label',
+        ordered=False,
+        descr=r"""provides static label information to the model;
+        unused in computation. These data will be passed along through
+        the meta class and output in the simulation result files.
+        These data can also be accessed within user-defined transfer
+        functions by using \texttt{meta['HERON']['Case'].get_labels()}."""
+    )
+    label_specs.addParam(
+        name='name',
+        param_type=InputTypes.StringType,
+        descr=r"""the generalized name of the identifier.
+               Example: ``<label name="state">Idaho</label>''"""
+    )
+    input_specs.addSub(label_specs)
+
     mode_options = InputTypes.makeEnumType('ModeOptions', 'ModeOptionsType', ['opt', 'sweep'])
     desc_mode_options = r"""determines whether the outer RAVEN should perform optimization,
                          or a parametric (``sweep'') study. \default{sweep}"""
@@ -72,6 +90,8 @@ class Case(Base):
         solving the dispatch.""")
     time_discr.addSub(InputData.parameterInputFactory('time_variable', contentType=InputTypes.StringType,
         descr=r"""name for the \texttt{time} variable used in this simulation. \default{time}"""))
+    time_discr.addSub(InputData.parameterInputFactory('year_variable', contentType=InputTypes.StringType,
+        descr=r"""name for the \texttt{year} or \texttt{macro} variable used in this simulation. \default{Year}"""))
     time_discr.addSub(InputData.parameterInputFactory('start_time', contentType=InputTypes.FloatType,
         descr=r"""value for \texttt{time} variable at which the inner dispatch should begin. \default{0}"""))
     time_discr.addSub(InputData.parameterInputFactory('end_time', contentType=InputTypes.FloatType,
@@ -108,18 +128,11 @@ class Case(Base):
 
     # dispatcher
     dispatch = InputData.parameterInputFactory('dispatcher', ordered=False,
-        descr=r"""This node defines the dispatch strategy and options to use in the ``inner'' run.""")
-    dispatch_options = InputTypes.makeEnumType('DispatchOptions', 'DispatchOptionsType', [d for d in known_dispatchers])
-    dispatch.addSub(InputData.parameterInputFactory('type', contentType=dispatch_options,
-        descr=r"""the name of the ``inner'' dispatch strategy to use."""))
-    incr = InputData.parameterInputFactory('increment', contentType=InputTypes.FloatType,
-        descr=r"""When performing an incremental resource balance as part of a dispatch solve, this
-              determines the size of incremental adjustments to make for the given resource. If this
-              value is large, then the solve is accelerated, but may miss critical inflection points
-              in economical tradeoff. If this value is small, the solve may take much longer.""")
-    incr.addParam('resource', param_type=InputTypes.StringType, required=True,
-        descr=r"""indicates the resource for which this increment is being defined.""")
-    dispatch.addSub(incr)
+        descr=r"""This node defines the dispatch strategy and options to use in the ``inner''
+        run.""")
+    for d in known_dispatchers:
+      vld_spec = get_dispatcher(d).get_input_specs()
+      dispatch.addSub(vld_spec)
     input_specs.addSub(dispatch)
 
     # validator
@@ -133,7 +146,7 @@ class Case(Base):
 
     return input_specs
 
-  def __init__(self, **kwargs):
+  def __init__(self, run_dir, **kwargs):
     """
       Constructor
       @ In, None
@@ -143,6 +156,7 @@ class Case(Base):
     self.name = None           # case name
     self._mode = None          # extrema to find: min, max, sweep
     self._metric = 'NPV'       # UNUSED (future work); economic metric to focus on: lcoe, profit, cost
+    self.run_dir = run_dir     # location of HERON input file
 
     self.dispatch_name = None  # name of dispatcher to use
     self.dispatcher = None     # type of dispatcher to use
@@ -156,10 +170,15 @@ class Case(Base):
     self._num_hist = None      # number of history steps, hist_len / hist_interval
     self._global_econ = {}     # global economics settings, as a pass-through
     self._increments = {}      # stepwise increments for resource balancing
-    self._time_varname = 'time' # name of the variable throughout simulation
+    self._time_varname = 'time' # name of the time-variable throughout simulation
+    self._year_varname = 'Year' # name of the year-variable throughout simulation
+    self._labels = {}       # extra information pertaining to current case
 
     self._time_discretization = None # (start, end, number) for constructing time discretization, same as argument to np.linspace
     self._Resample_T = None    # user-set increments for resources
+
+    # clean up location
+    self.run_dir = os.path.abspath(os.path.expanduser(self.run_dir))
 
   def read_input(self, xml):
     """
@@ -173,6 +192,8 @@ class Case(Base):
     self.name = specs.parameterValues['name']
     for item in specs.subparts:
       # TODO move from iterative list to seeking list, at least for required nodes
+      if item.getName() == 'label':
+        self._labels[item.parameterValues['name']] = item.value
       if item.getName() == 'mode':
         self._mode = item.value
       elif item.getName() == 'metric':
@@ -183,20 +204,16 @@ class Case(Base):
         self._num_samples = item.value
       elif item.getName() == 'time_discretization':
         self._time_discretization = self._read_time_discr(item)
-
       elif item.getName() == 'economics':
         for sub in item.subparts:
           self._global_econ[sub.getName()] = sub.value
       elif item.getName() == 'dispatcher':
         # instantiate a dispatcher object.
-        name = item.findFirst('type').value
+        inp = item.subparts[0]
+        name = inp.getName()
         typ = get_dispatcher(name)
         self.dispatcher = typ()
-        self.dispatcher.read_input(item)
-        # XXX Remove -> send to dispatcher instead
-        for sub in item.subparts:
-          if item.getName() == 'increment':
-            self._increments[item.parameterValues['resource']] = item.value
+        self.dispatcher.read_input(inp)
       elif item.getName() == 'validator':
         vld = item.subparts[0]
         name = vld.getName()
@@ -216,9 +233,6 @@ class Case(Base):
     self.dispatcher.set_time_discr(self._time_discretization)
     self.dispatcher.set_validator(self.validator)
 
-    # derivative calculations
-    # OLD self._num_hist = self._hist_len // self._hist_interval # TODO what if it isn't even?
-
     self.raiseADebug('Successfully initialized Case {}.'.format(self.name))
 
   def _read_time_discr(self, node):
@@ -231,6 +245,10 @@ class Case(Base):
     var_name = node.findFirst('time_variable')
     if var_name is not None:
       self._time_varname = var_name.value
+    # name of year variable
+    year_name = node.findFirst('year_variable')
+    if year_name is not None:
+      self._year_varname = year_name.value
     # start
     start_node = node.findFirst('start_time')
     if start_node is None:
@@ -317,15 +335,14 @@ class Case(Base):
       raise NotImplementedError('Unrecognized working dir request: "{}"'.format(which))
     return '{case}_{io}'.format(case=self.name, io=io)
 
-  def get_econ(self, components):
+  def load_econ(self, components):
     """
-      Accessor for economic settings for this case
+      Loads active component cashflows
       @ In, components, list, list of HERON components
-      @ Out, get_econ, dict, dictionary of global economic settings
+      @ Out, None
     """
-    # only add additional params the first time this is called
     if 'active' not in self._global_econ:
-      # NOTE self._metric can only be NPV right now! XXX TODO FIXME
+      # NOTE self._metric can only be NPV right now!
       ## so no need for the "target" in the indicator
       indic = {'name': [self._metric]}
       indic['active'] = []
@@ -335,7 +352,23 @@ class Case(Base):
           cf_name = cf.name
           indic['active'].append('{}|{}'.format(comp_name, cf_name))
       self._global_econ['Indicator'] = indic
+
+  def get_econ(self, components):
+    """
+      Accessor for economic settings for this case
+      @ In, components, list, list of HERON components
+      @ Out, get_econ, dict, dictionary of global economic settings
+    """
+    self.load_econ(components)
     return self._global_econ
+
+  def get_labels(self):
+    """
+      Accessor
+      @ In, None
+      @ Out, _labels, dict, labels for this case
+    """
+    return self._labels
 
   def get_metric(self):
     """
@@ -376,6 +409,14 @@ class Case(Base):
       @ Out, time name, string, name of time variable
     """
     return self._time_varname
+
+  def get_year_name(self):
+    """
+      Provides the name of the time variable.
+      @ In, None
+      @ Out, time name, string, name of time variable
+    """
+    return self._year_varname
 
   def get_Resample_T(self):
     """
@@ -460,7 +501,6 @@ class Case(Base):
     ###################
     run_info = template.find('RunInfo')
     case_name = self.get_working_dir('outer') #self.string_templates['jobname'].format(case=self.name, io='o')
-    ooooooooo # I don't think this gets run!
     # job name
     run_info.find('JobName').text = case_name
     # working dir

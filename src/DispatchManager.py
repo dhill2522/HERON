@@ -100,12 +100,15 @@ class DispatchRunner:
 
     # TODO magic keywords (e.g. verbosity, MAX_TIMES, MAX_YEARS, ONLY_DISPATCH, etc)
     # TODO other arbitrary constants, such as sampled values from Outer needed in Inner?
+
     # component capacities
     for comp in self._components:
       name = self.naming_template['comp capacity'].format(comp=comp.name)
       update_capacity = raven_dict.get(name) # TODO is this ever not provided?
       comp.set_capacity(update_capacity)
+      pass_vars[f'{comp.name}_capacity'] = update_capacity
     # TODO other case, component properties
+
     # load ARMA signals
     for source in self._sources:
       if source.is_type('ARMA'):
@@ -261,7 +264,8 @@ class DispatchRunner:
                                         }
         # truncate RAVEN variables to the active space
         meta['HERON']['RAVEN_vars'] = self._slice_signals(all_structure, meta['HERON'])
-        times = meta['HERON']['RAVEN_vars']['Time'] # XXX FIXME TODO how do I know what pivot var?
+        pivot_var = meta['HERON']['Case'].get_time_name() # TODO: Better way to get pivotParameterID?
+        times = meta['HERON']['RAVEN_vars'][pivot_var]
         specific_meta = dict(meta) # TODO more deepcopy needed?
         resource_indexer = meta['HERON']['resource_indexer']
         print('DEBUGG ... ... intradivision run data isolated ...')
@@ -292,6 +296,7 @@ class DispatchRunner:
             # TODO we assume Capex and Recurring Year do not depend on the Activity
             if cf_cf.type == 'Capex':
               # Capex cfs should only be constructed in the first year of the project life
+              # FIXME is this doing capex once per segment, or once per life?
               if year == 0:
                 params = heron_cf.calculate_params(specific_meta) # a, D, Dp, x, cost
                 cf_params = {'name': cf_cf.name,
@@ -307,15 +312,23 @@ class DispatchRunner:
                 # hot swap this cashflow into the final_comp, I think ...
                 # I believe we can do this because Capex are division-independent? Can we just do
                 #   it once instead of once per division?
-                final_comp._cash_flows[f] = cf_cf
-              # else: nothing to do if Capex and year != 0
+                final_comp._cashFlows[f] = cf_cf
+                # depreciators
+                # FIXME do we need to know alpha, drivers first??
+                if heron_cf._depreciate:
+                  cf_cf.setAmortization('MACRS', heron_cf._depreciate)
+                  deprs = cf_comp._createDepreciation(cf_cf)
+                  final_comp._cashFlows.extend(deprs)
+                print(f'DEBUGG ... ... ... ... ... yearly contribution: {params["cost"]: 1.9e} ...')
+              else: # nothing to do if Capex and year != 0
+                print(f'DEBUGG ... ... ... ... ... yearly contribution: 0 ...')
             elif cf_cf.type == 'Recurring':
               # yearly recurring only need setting up once per year
               if heron_cf.get_period() == 'year':
                 params = heron_cf.calculate_params(specific_meta) # a, D, Dp, x, cost
-                contrib = cf_cf._yearly_cashflow
+                contrib = params['cost'] # cf_cf._yearlyCashflow
                 print(f'DEBUGG ... ... ... ... ... yearly contribution: {contrib: 1.9e} ...')
-                final_cf._yearly_cashflow[year + 1] += contrib # FIXME multiplicity? -> should not apply to Recurring.Yearly
+                final_cf._yearlyCashflow[year + 1] += contrib # FIXME multiplicity? -> should not apply to Recurring.Yearly
               # hourly recurring need iteration over time
               elif heron_cf.get_period() == 'hour':
                 for t, time in enumerate(times):
@@ -354,7 +367,10 @@ class DispatchRunner:
         print(f' ... ... cf {cf.name} ...')
         print(f' ... ... ... D', cf._driver)
         print(f' ... ... ... a', cf._alpha)
-        print(f' ... ... ... a', cf._yearlyCashflow)
+        print(f' ... ... ... Dp', cf._reference)
+        print(f' ... ... ... x', cf._scale)
+        if hasattr(cf, '_yearlyCashflow'):
+          print(f' ... ... ... hourly', cf._yearlyCashflow)
 
     cf_metrics = CashFlow_run(final_settings, list(final_components.values()), raven_vars)
 
@@ -411,10 +427,10 @@ class DispatchRunner:
                           }
           cf_cf.setParams(cf_cf_params)
           cf_cf.initParams(project_life)
-        elif heron_cf._type == 'one_time': # FIXME protected access
+        elif heron_cf._type == 'one-time': # FIXME protected access
           cf_cf = CashFlows.Capex()
           cf_cf.name = cf_name
-          cf_cf.init_params(cf_comp.get_lifetime())
+          cf_cf.initParams(cf_comp.getLifetime())
           # alpha, driver aren't known yet, so set those later
         else:
           raise NotImplementedError(f'Unknown HERON CashFlow Type: {heron_cf._type}')
@@ -456,7 +472,7 @@ class DispatchRunner:
             shape = (len(dispatch), len(year_data), len(data))
             setattr(raven, var_name, np.empty(shape)) # FIXME could use np.zeros, but slower?
           getattr(raven, var_name)[y, c] = data
-          getattr(raven, '_indexMap')[0][var_name] = ['Year', 'Cluster', 'ClusterTime']
+          getattr(raven, '_indexMap')[0][var_name] = [self._case.get_year_name(), 'Cluster', 'ClusterTime']
         #for component in self._components:
           # TODO cheating using the numpy state
         #  dispatch = cluster_data['dispatch']
@@ -637,8 +653,8 @@ class DispatchRunner:
           cluster_index = index_order.index('Cluster')
           slicer[cluster_index] = division
         # macro time (e.g. cycle, year)
-        if 'Year' in index_order:
-          macro_index = index_order.index('Year') # FIXME Macro ID!
+        if self._case.get_year_name() in index_order:
+          macro_index = index_order.index(self._case.get_year_name())
           slicer[macro_index] = macro
         truncated[entry] = raven[entry][slicer]
         truncated['_indexMap'][entry] = [time_var] # the only index left should be "time"

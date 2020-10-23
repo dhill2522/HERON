@@ -86,6 +86,9 @@ class Template(TemplateBase):
     self._template_cash = None
     self._template_inner = None
     self._template_outer = None
+    self.__case = None
+    self.__components = None
+    self.__sources = None
 
   def loadTemplate(self, path):
     """
@@ -116,11 +119,12 @@ class Template(TemplateBase):
     self.__case = case
     self.__components = components
     self.__sources = sources
+    # initialize case economics
+    case.load_econ(components)
     # load a copy of the template
     inner = copy.deepcopy(self._template_inner)
     outer = copy.deepcopy(self._template_outer)
     cash = copy.deepcopy(self._template_cash)
-
     # modify the templates
     inner = self._modify_inner(inner, case, components, sources)
     outer = self._modify_outer(outer, case, components, sources)
@@ -183,7 +187,7 @@ class Template(TemplateBase):
     """
     self._modify_outer_mode(template, case)
     self._modify_outer_runinfo(template, case)
-    self._modify_outer_vargroups(template, components)
+    self._modify_outer_vargroups(template, case, components)
     self._modify_outer_files(template, sources)
     self._modify_outer_models(template, components)
     self._modify_outer_samplers(template, case, components)
@@ -241,7 +245,7 @@ class Template(TemplateBase):
     run_info.find('JobName').text = case_name
     run_info.find('WorkingDir').text = case_name
 
-  def _modify_outer_vargroups(self, template, components):
+  def _modify_outer_vargroups(self, template, case, components):
     """
       Defines modifications to the VariableGroups of outer.xml RAVEN input file.
       @ In, template, xml.etree.ElementTree.Element, root of XML to modify
@@ -252,6 +256,13 @@ class Template(TemplateBase):
     # capacities
     caps = var_groups[0]
     caps.text = ', '.join('{}_capacity'.format(x.name) for x in components)
+    if case.get_labels():
+      case_labels = ET.SubElement(var_groups, 'Group', attrib={'name': 'GRO_case_labels'})
+      case_labels.text = ', '.join([f'{key}_label' for key in case.get_labels().keys()])
+      for node in template.find('DataObjects'):
+        if node.get('name') == 'grid':
+          input_node = node.find('Input')
+          input_node.text += ', GRO_case_labels'
 
   def _modify_outer_files(self, template, sources):
     """
@@ -294,6 +305,13 @@ class Template(TemplateBase):
       new = xmlUtils.newNode('alias', text=text.format(name), attrib=attribs)
       raven.append(new)
 
+    # label aliases placed inside models
+    text = 'Samplers|MonteCarlo@name:mc_arma_dispatch|constant@name:{}_label'
+    for var, _ in self.__case.get_labels().items():
+      attribs = {'variable': '{}_label'.format(var), 'type':'input'}
+      new = xmlUtils.newNode('alias', text=text.format(var), attrib=attribs)
+      raven.append(new)
+
   def _modify_outer_samplers(self, template, case, components):
     """
       Defines modifications to the Samplers/Optimizers of outer.xml RAVEN input file.
@@ -313,6 +331,12 @@ class Template(TemplateBase):
     samps_node.find('constant').text = str(case._num_samples)
     # add sweep variables to input
 
+    ## TODO: Refactor this portion with the below portion to handle
+    ## all general cases instead of only two.
+    for key, value in case.get_labels().items():
+        var_name = self.namingTemplates['variable'].format(unit=key, feature='label')
+        samps_node.append(xmlUtils.newNode('constant', text=value, attrib={'name': var_name}))
+
     for component in components:
       interaction = component.get_interaction()
       # NOTE this algorithm does not check for everthing to be swept! Future work could expand it.
@@ -320,7 +344,7 @@ class Template(TemplateBase):
       ## --> this really needs to be made generic for all kinds of valued params!
       name = component.name
       var_name = self.namingTemplates['variable'].format(unit=name, feature='capacity')
-      cap = interaction.get_capacity(None, None, None, None, raw=True)
+      cap = interaction.get_capacity(None, raw=True)
       # do we already know the capacity values?
       if cap.type == 'value':
         vals = cap.get_values()
@@ -388,10 +412,55 @@ class Template(TemplateBase):
     # NOTE: this HAS to come before modify_inner_denoisings,
     #       because we'll be copy-pasting these for each denoising --> or wait, maybe that's for the Outer to do!
     self._modify_inner_components(template, case, components)
+    self._modify_inner_caselabels(template, case)
+    self._modify_inner_time_vars(template, case)
     # TODO modify based on resources ... should only need if units produce multiple things, right?
     # TODO modify CashFlow input ... this will be a big undertaking with changes to the inner.
     ## Maybe let the user change them? but then we don't control the variable names. We probably have to do it.
     return template
+
+  def _modify_inner_caselabels(self, template, case):
+    """
+      Create GRO_case_labels VariableGroup if labels have been provided.
+      @ In, template, xml.etree.ElementTree.Element, root of XML to modify
+      @ In, case, HERON Case, defining Case instance
+      @ Out, None
+    """
+    if case.get_labels():
+      var_groups = template.find('VariableGroups')
+      case_labels = ET.SubElement(var_groups, 'Group', attrib={'name': 'GRO_case_labels'})
+      case_labels.text = ', '.join([f'{key}_label' for key in case.get_labels().keys()])
+      ## Since <label> is optional, we don't want to hard-code it into
+      ## the template files. So we will create it as needed and then
+      ## modify GRO_armasamples_in_scalar to contain the group.
+      for node in var_groups:
+        if node.get('name') in ['GRO_armasamples_in_scalar', 'GRO_dispatch_in_scalar']:
+          node.text += ', GRO_case_labels'
+      # Add case labels to Sampler node as well.
+      mc = template.find('Samplers').find('MonteCarlo')
+      for key, value in case.get_labels().items():
+        label_name = self.namingTemplates['variable'].format(unit=key, feature='label')
+        case_labels = ET.SubElement(mc, 'constant', attrib={'name': label_name})
+        case_labels.text = value
+
+  def _modify_inner_time_vars(self, template, case):
+    """
+      Modify Index var attributes of DataObjects if case._time_varname is not 'Time.'
+      @ In, template, xml.etree.ElementTree.Element, root of XML to modify
+      @ In, case, HERON Case, defining Case instance
+      @ Out, None
+    """
+    # Modify GRO_dispatch to contain correct 'Time' and 'Year' variable.
+    var_group = template.find("VariableGroups/Group")
+    var_group.text += f", {case.get_time_name()}, {case.get_year_name()}"
+    # Modify Data Objects to contain correct index var.
+    data_objs = template.find('DataObjects')
+    for index in data_objs.findall("DataSet/Index"):
+      if index.get('var') == 'Time':
+        index.set('var', case.get_time_name())
+      if index.get('var') == 'Year':
+        index.set('var', case.get_year_name())
+
 
   def _modify_inner_runinfo(self, template, case):
     """
@@ -454,8 +523,8 @@ class Template(TemplateBase):
       ## For each interaction of each component, that means making sure the Function, ARMA, or constant makes it.
       ## Constants from outer (namely sweep/opt capacities) are set in the MC Sampler from the outer
       ## The Dispatch needs info from the Outer to know which capacity to use, so we can't pass it from here.
+      capacity = component.get_capacity(None, raw=True)
       interaction = component.get_interaction()
-      capacity = interaction.get_capacity(None, None, None, None, raw=True)
       values = capacity.get_values()
       #cap_name = self.namingTemplates['variable'].format(unit=name, feature='capacity')
       if isinstance(values, (list, float)):
@@ -468,6 +537,8 @@ class Template(TemplateBase):
         else:
           cap_val = values
         mc.append(xmlUtils.newNode('constant', attrib={'name': cap_name}, text=cap_val))
+        # add component to applicable variable groups
+        self._updateCommaSeperatedList(groups['capacities'], cap_name)
       elif values is None and capacity.type in ['ARMA', 'Function', 'variable']:
         # capacity is limited by a signal, so it has to be handled in the dispatch; don't include it here.
         # OR capacity is limited by a function, and we also can't handle it here, but in the dispatch.
@@ -475,8 +546,6 @@ class Template(TemplateBase):
       else:
         raise NotImplementedError('Capacity from "{}" not implemented yet. Component: {}'.format(capacity, cap_name))
 
-      # add component to applicable variable groups
-      self._updateCommaSeperatedList(groups['capacities'], cap_name)
       for resource in interaction.get_resources():
         var_name = self.namingTemplates['dispatch'].format(component=name, resource=resource)
         self._updateCommaSeperatedList(groups['init_disp'], var_name)
@@ -602,7 +671,7 @@ class Template(TemplateBase):
     self._create_dataobject(data_objs, 'DataSet', eval_name,
                             inputs=['scaling'],
                             outputs=out_vars,
-                            depends={'Time': out_vars, 'Year': out_vars}) # TODO user-defined?
+                            depends={self.__case.get_time_name(): out_vars, self.__case.get_year_name(): out_vars}) # TODO user-defined?
 
     # add variables to dispatch input requirements
     ## before all else fails, use variable groups

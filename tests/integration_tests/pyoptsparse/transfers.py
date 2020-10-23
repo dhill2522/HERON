@@ -26,7 +26,7 @@ def generator(data, meta):
 
   if 'steam' in data:
     # Determine the electricity output for a given steam input
-    data['electricity'] = effciency * data['steam']
+    data['electricity'] = -1 * effciency * data['steam']
   elif 'electricity' in data:
     # Determine the steam input for a given electricity output
     data['steam'] = -1/effciency * data['electricity']

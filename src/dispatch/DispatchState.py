@@ -184,3 +184,15 @@ class NumpyState(DispatchState):
     """
     r = self._resources[comp][res]
     self._data[comp][r, start_time:end_time] = values
+
+  def get_activity_vector(self, comp, res, start_time, end_time):
+    """
+      Shortcut utility for getting values all-at-once in a vector.
+      @ In, comp, HERON Component, component whose information should be set
+      @ In, res, string, name of resource to retrieve
+      @ In, start_time, int, first time index at which activity is provided
+      @ In, end_time, int, last time at which activity is provided (not inclusive)
+      @ Out, values, np.array, activity level; note positive is producting, negative is consuming
+    """
+    r = self._resources[comp][res]
+    return self._data[comp][r, start_time:end_time]

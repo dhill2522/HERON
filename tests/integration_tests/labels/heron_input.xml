@@ -1,23 +1,23 @@
 <HERON>
   <TestInfo>
-    <name>production</name>
-    <author>talbpaul</author>
-    <created>2020-06-15</created>
+    <name>labels</name>
+    <author>dylanjm</author>
+    <created>2020-10-12</created>
     <description>
-      Tests including a consume-and-produce unit, and the pyomo dispatcher.
-      Uses an ARMA for ``electr_flex'' pricing.
-      May be able to serve as a timing test in the future.
-      ``steamer'' produces steam which is consumed by ``generator'' to produce electricity. This electricity
-      can then be sold at the ``electr_market'' at a profit or ``electr_flex'' at a variable profit/cost.
+      Tests including case-info user defined labels. Extends from production\_flex.
     </description>
     <classesTested>HERON</classesTested>
   </TestInfo>
 
   <Case name="Sweep_Runs">
+    <label name="state">Idaho</label>
+    <label name="strategy">LNHR</label>
+    <label name="tax">CarbonTax</label>
     <mode>sweep</mode>
-    <num_arma_samples>4</num_arma_samples>
+    <num_arma_samples>10</num_arma_samples>
     <time_discretization>
-      <time_variable>Time</time_variable>
+      <time_variable>Hour</time_variable>
+      <year_variable>YEAR</year_variable>
       <end_time>2</end_time>
       <num_steps>21</num_steps>
     </time_discretization>
@@ -29,7 +29,7 @@
       <verbosity>50</verbosity>
     </economics>
     <dispatcher>
-      <pyoptsparse/>
+      <pyomo/>
     </dispatcher>
   </Case>
 
@@ -66,7 +66,10 @@
           <fixed_value>-100</fixed_value>
         </capacity>
         <transfer>
-	        <Function method="generator">transfers</Function>
+          <linear>
+            <rate resource="steam">-1</rate>
+            <rate resource="electricity">0.5</rate>
+          </linear>
         </transfer>
       </produces>
       <economics>
@@ -132,7 +135,7 @@
   </Components>
 
   <DataGenerators>
-    <ARMA name='Price' variable="Signal">../ARMA/Sine/arma.pk</ARMA>
+    <ARMA name='Price' variable="Signal">../ARMA/Sine_Hour/arma.pk</ARMA>
     <Function name="transfers">transfers.py</Function>
   </DataGenerators>
 
