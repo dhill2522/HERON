@@ -765,7 +765,7 @@ class Producer(Interaction):
       @ Out, balance, dict, results of requested action
       @ Out, meta, dict, additional variable passthrough
     """
-    request, meta = self.get_capacity(meta, raven_vars, dispatch, t)
+    request, meta = self.get_capacity(meta)
     balance, meta = self.produce(request, meta, raven_vars, dispatch, t)
     # dict((prod, self._capacity[p]) for p, prod in enumerate(self._produces))
     return balance, meta
@@ -781,7 +781,7 @@ class Producer(Interaction):
       @ Out, meta, dict, additional variable passthrough
     """
     if self._minimum:
-      request, meta = self.get_minimum(meta, raven_vars, dispatch, t)#[self._minimum]
+      request, meta = self.get_minimum(meta)#[self._minimum]
       request = {self._minimum_var: request[self._minimum_var]}
     else:
       request = {next(iter(self.get_outputs())): 0.0}
@@ -929,22 +929,21 @@ class Storage(Interaction):
     print(pre+'  rate:', self._rate)
     print(pre+'  capacity:', self._capacity)
 
-  def produce(self, request, meta, raven_vars, dispatch, t, level=None):
+  def produce(self, request, meta, raven_vars, dispatch, t, dt, level=None):
     """
       Determines the results of this interaction producing resources.
       @ In, request, dict, requested action {resource: amount}
       @ In, meta, dict, additional variables to pass through
       @ In, raven_vars, dict, TODO part of meta! consolidate!
-      @ In, dispatch, dict, TODO part of meta! consolidate!
+      @ In, dispatch, DispatchState, TODO part of meta! consolidate!
       @ In, t, int, TODO part of meta! consolidate!
+      @ In, dt, float, size of time step
       @ In, level, float, storage level
       @ Out, balance, dict, results of requested action
       @ Out, meta, dict, additional variable passthrough
     """
     if level is None:
       raise RuntimeError('Storage level information was not provided to Storage produce call!')
-    dt = dispatch()['time'].values
-    dt = dt[t] - dt[t-1] if t > 0 else dt[t+1] - dt[t]
     res, amt_rate = next(iter(request.items()))
     # UNITS: amt_rate is in resource per time, NOT pure resource!
     amt_amount = amt_rate * dt
@@ -966,7 +965,7 @@ class Storage(Interaction):
       @ In, balance, dict, results of requested interaction
       @ In, meta, dict, additional variable passthrough
       @ In, raven_vars, dict, TODO part of meta! consolidate!
-      @ In, dispatch, dict, TODO part of meta! consolidate!
+      @ In, dispatch, DispatchState, TODO part of meta! consolidate!
       @ In, t, int, TODO part of meta! consolidate!
       @ In, level, float, current level of storage
       @ Out, balance, dict, new results of requested action, possibly modified if capacity hit
@@ -978,7 +977,7 @@ class Storage(Interaction):
     #print('DEBUGG supposed current level:', level)
     if sign < 0:
       # we are being asked to consume some
-      cap, meta = self.get_capacity(meta, raven_vars, dispatch, t)
+      cap, meta = self.get_capacity(meta)
       available_amount = cap[res] - level
       #print('Supposed Capacity, Only calculated ins sign<0 (being asked to consumer)',cap)
     else:
@@ -996,7 +995,7 @@ class Storage(Interaction):
       @ In, balance, dict, results of requested interaction
       @ In, meta, dict, additional variable passthrough
       @ In, raven_vars, dict, TODO part of meta! consolidate!
-      @ In, dispatch, dict, TODO part of meta! consolidate!
+      @ In, dispatch, DispatchState, TODO part of meta! consolidate!
       @ In, t, int, TODO part of meta! consolidate!
       @ Out, balance, dict, new results of requested action, possibly modified if capacity hit
       @ Out, meta, dict, additional variable passthrough
@@ -1012,7 +1011,7 @@ class Storage(Interaction):
                 't': t}
       max_rate = self._rate.evaluate(inputs, target_var=res)[0][res]
       delta = np.sign(amt) * min(max_rate, abs(amt))
-      print('max_rate in _check_rate_limit',max_rate, 'delta (min of maxrate and abs(amt)',delta)
+      # print('max_rate in _check_rate_limit',max_rate, 'delta (min of maxrate and abs(amt)',delta)
       return {res: delta}, meta
     return {res: amt}, meta
 
@@ -1021,7 +1020,7 @@ class Storage(Interaction):
       Find initial level of the storage
       @ In, meta, dict, additional variable passthrough
       @ In, raven_vars, dict, TODO part of meta! consolidate!
-      @ In, dispatch, dict, TODO part of meta! consolidate!
+      @ In, dispatch, DispatchState, TODO part of meta! consolidate!
       @ In, t, int, TODO part of meta! consolidate!
       @ Out, initial, float, initial level
     """
@@ -1133,7 +1132,7 @@ class Demand(Interaction):
       @ Out, balance, dict, results of requested action
       @ Out, meta, dict, additional variable passthrough
     """
-    request, meta = self.get_capacity(meta, raven_vars, dispatch, t)
+    request, meta = self.get_capacity(meta)
     return request, meta
 
   def produce_min(self, meta, raven_vars, dispatch, t):

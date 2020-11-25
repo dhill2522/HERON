@@ -37,7 +37,7 @@
     <Component name="steamer">
       <produces resource="steam" dispatch="fixed">
         <capacity resource="steam">
-          <sweep_values>1, 100</sweep_values>
+          <sweep_values>100, 1000</sweep_values>
         </capacity>
       </produces>
       <economics>
@@ -56,6 +56,24 @@
             <fixed_value>1</fixed_value>
           </scaling_factor_x>
         </CashFlow>-->
+      </economics>
+    </Component>
+
+    <Component name="TES">
+      <stores resource="steam" dispatch="independent">
+
+        <capacity resource="steam">
+          <fixed_value>100</fixed_value>
+        </capacity>
+        <rate>
+          <fixed_value>100</fixed_value>
+        </rate>
+        <!-- <transfer>
+          <Function method="TES">transfers</Function>
+        </transfer> -->
+      </stores>
+      <economics>
+        <lifetime>30</lifetime>
       </economics>
     </Component>
 

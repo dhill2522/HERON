@@ -2,8 +2,6 @@ from .Dispatcher import Dispatcher
 from .DispatchState import NumpyState
 from utils import InputData
 
-# import jax
-# print('imported jax')
 import pyoptsparse
 import numpy as np
 import sys
@@ -79,7 +77,10 @@ class PyOptSparse(Dispatcher):
   def determine_dispatch(self, opt_vars, time):
     '''Determine the dispatch from a given set of optimization
     vars by running the transfer functions. Returns a Numpy dispatch
-    object'''
+    object
+    @ In, opt_vars, dict, holder for all the optimization variables
+    @ In, time, list, time horizon to dispatch over
+    '''
     # Initialize the dispatch
     dispatch = NumpyState()
     dispatch.initialize(self.components, self.resource_index_map, time)
@@ -96,7 +97,14 @@ class PyOptSparse(Dispatcher):
       inter = d.get_interaction()
       for i in range(len(time)):
         request = {d.get_capacity_var(): opt_vars[d.name][i]}
-        bal, meta = inter.produce(request, self.meta, self.sources, dispatch, i)
+        if inter.tag == 'stores':
+          # FIXME: Determine what the current resource level is
+          lvl = 0
+          # FIXME: Determine dt
+          dt = 1.0
+          bal, meta = inter.produce(request, self.meta, self.sources, dispatch, i, dt, lvl)
+        else:
+          bal, meta = inter.produce(request, self.meta, self.sources, dispatch, i)
         for res, value in bal.items():
           dispatch.set_activity_indexed(d, self.resource_index_map[d][res], i, value)
 
@@ -168,7 +176,7 @@ class PyOptSparse(Dispatcher):
           )
 
       win_i += 1
-      win_start_i = win_end_i
+      win_start_i = win_end_i - 1 # Need to overlap time windows
 
     return full_dispatch
 
@@ -195,6 +203,8 @@ class PyOptSparse(Dispatcher):
       things['objective'] = self._compute_cashflows(self.components, dispatch, time_window, self.meta)
       # Run the resource pool constraints
       things['resource_balance'] = [cons(dispatch) for cons in pool_cons]
+      things['window_overlap'] = []
+      # FIXME: Nothing is here to verify ramp rates!
       return things, False
 
     # Step 5) Assemble the parts for the optimizer function
@@ -205,12 +215,9 @@ class PyOptSparse(Dispatcher):
         # FIXME: will need to find a way of generating the guess values
         optProb.addVarGroup(comp, len(time_window), 'c', value=-1, lower=bounds[0], upper=bounds[1])
     optProb.addConGroup('resource_balance', len(pool_cons), lower=0, upper=0)
+    # if win_i != 0:
+    #   optProb.addConGroup('window_overlap', len())
     optProb.addObj('objective')
-
-
-    # jac = jax.jacobian(obj)
-    # print(jac(optProb.getDVs()))
-    # print('got the jacobian!')
 
     # Step 6) Run the optimization
     print('Step 6) Running the dispatch optimization', time_lib.time() - self.start_time)
