@@ -59,7 +59,7 @@
       </economics>
     </Component>
 
-    <Component name="TES">
+    <!-- <Component name="TES">
       <stores resource="steam" dispatch="independent">
 
         <capacity resource="steam">
@@ -68,14 +68,11 @@
         <rate>
           <fixed_value>100</fixed_value>
         </rate>
-        <!-- <transfer>
-          <Function method="TES">transfers</Function>
-        </transfer> -->
       </stores>
       <economics>
         <lifetime>30</lifetime>
       </economics>
-    </Component>
+    </Component> -->
 
     <Component name="generator">
       <produces resource="electricity" dispatch="independent">
