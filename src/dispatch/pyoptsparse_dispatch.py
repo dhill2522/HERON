@@ -90,16 +90,18 @@ class PyOptSparse(Dispatcher):
       capacity_var = c.get_capacity_var()
       cap = c.get_capacity(meta)[0][capacity_var]
       capacity = np.ones(len(time_horizon)) * cap
+      print(list(c.get_outputs()), list(c.get_inputs()), c._stores)
       ch_comp = chickadee.PyOptSparseComponent(
         c.name,
         capacity,
+        1e5*np.ones(len(time_horizon)),
         1e5*np.ones(len(time_horizon)),
         capacity_var,
         generate_transfer(c, sources, dt),
         None, # External cost function is used
         produces=list(c.get_outputs()),
         consumes=list(c.get_inputs()),
-        stores=c._stores,
+        stores=c._stores[0] if c._stores else None,
         dispatch_type=c.is_dispatchable()
       )
       ch_comps.append(ch_comp)
