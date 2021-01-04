@@ -1,0 +1,144 @@
+<HERON>
+  <TestInfo>
+    <name>production</name>
+    <author>sexydrew</author>
+    <created>2020-06-15</created>
+    <description>
+      I am pretty sure that this is changing the npp to meet the arma
+      trained on the caiso grid. 
+    </description>
+    <classesTested>HERON</classesTested>
+  </TestInfo>
+
+  <Case name="Sweep_Runs">
+    <mode>sweep</mode>
+    <num_arma_samples>4</num_arma_samples>
+    <time_discretization>
+      <time_variable>Time</time_variable>
+      <end_time>2</end_time>
+      <num_steps>21</num_steps> <!--Need to change based on arma-->
+    </time_discretization>
+    <economics>
+      <ProjectTime>3</ProjectTime>
+      <DiscountRate>0.08</DiscountRate>
+      <tax>0.0</tax>
+      <inflation>0.0</inflation>
+      <verbosity>50</verbosity>
+    </economics>
+    <dispatcher>
+      <pyoptsparse/>
+    </dispatcher>
+  </Case>
+
+  <Components>
+    <Component name="npp">
+      <produces resource="steam" dispatch="independent">
+        <capacity resource="steam">
+          <sweep_values>26000,22000</sweep_values>
+          <!-- <opt_bounds>2222.2,22222.2</opt_bounds> -->
+        </capacity>
+        <!-- <transfer>
+          <Function method="power_conversion">transfers</Function>
+        </transfer> -->
+      </produces>
+      <economics>
+        <lifetime>27</lifetime>
+      </economics>
+    </Component>
+
+    <Component name="turbine">
+      <produces resource="electricity" dispatch="dependent">
+        <consumes>steam</consumes>
+        <capacity resource="steam">
+          <fixed_value>-1e10</fixed_value>
+        </capacity>
+        <transfer>
+          <linear>
+            <rate resource="steam">-1</rate>
+            <rate resource="electricity">0.5</rate>
+          </linear>
+        </transfer>
+        <!-- <transfer>
+          <Function method="turb_conversion">transfers</Function>
+        </transfer> -->
+      </produces>
+      <economics>
+        <lifetime>27</lifetime>
+        <!--<CashFlow name="var_om" type="repeating" taxable='True' inflation='none' mult_target='False'>
+          <driver>
+            <resource>electricity</resource>
+            <Function method="steam_consume">transfers</Function>
+          </driver>
+          <reference_price>
+            <fixed_value>0.01</fixed_value>
+          </reference_price>
+        </CashFlow>-->
+      </economics>
+    </Component>
+
+    <Component name="electr_market">
+      <demands resource="electricity" dispatch="dependent">
+        <capacity>
+          <!-- <fixed_value>-2</fixed_value> -->
+          <fixed_value>0</fixed_value>
+        </capacity>
+      </demands>
+      <economics>
+        <lifetime>30</lifetime>
+        <CashFlow name="e_sales" type="repeating" taxable='True' inflation='none' mult_target='False'>
+          <driver>
+            <Function method="electric_consume">transfers</Function>
+            <!-- <resource multiplier="-1" absolute="True">electricity</resource> -->
+          </driver>
+          <reference_price>
+            <fixed_value>0.5</fixed_value>
+          </reference_price>
+        </CashFlow>
+      </economics>
+    </Component>
+
+   <Component name="TES">
+      <stores resource="steam" dispatch="independent">
+	      <capacity resource="steam">
+          <fixed_value>5e9</fixed_value>
+        </capacity>
+        <rate>
+          <fixed_value>5e8</fixed_value>
+        </rate>
+        <initial_stored>
+          <fixed_value>500</fixed_value>
+        </initial_stored>
+      </stores>
+      <economics>
+        <lifetime>27</lifetime>
+      </economics>
+    </Component>
+
+    <Component name="electr_flex">
+      <demands resource="electricity" dispatch="independent">
+        <capacity>
+          <!-- <ARMA variable="Signal">Load</ARMA> -->
+          <fixed_value>-1e2</fixed_value>
+        </capacity>
+      </demands>
+      <economics>
+        <lifetime>30</lifetime>
+        <CashFlow name="e_sales" type="repeating" taxable='True' inflation='none' mult_target='False'>
+          <driver>
+            <Function method="electric_consume">transfers</Function>
+          </driver>
+          <reference_price>
+            <Function method="flex_price">transfers</Function>
+          </reference_price>
+        </CashFlow>
+      </economics>
+    </Component>
+
+  </Components>
+
+  <DataGenerators>
+    <ARMA name='Price' variable="Signal">arma1.pk</ARMA>
+    <Function name="transfers">transfers.py</Function>
+  </DataGenerators>
+
+</HERON>

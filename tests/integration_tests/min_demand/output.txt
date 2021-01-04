@@ -1,0 +1,230 @@
+CONDA
+raven_libraries       *  /home/prism/anaconda3/envs/raven_libraries
+Running RAVEN in "opt" mode.
+Loading plugin "HERON" at /home/prism/repos/HERON
+ ... successfully imported "HERON" ...
+Loading plugin "TEAL" at /home/prism/repos/TEAL
+ ... successfully imported "TEAL" ...
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      .---.        .------######       #####     ###   ###  ########  ###    ###
+     /     \  __  /    --###  ###    ###  ###   ###   ###  ###       #####  ###
+    / /     \(  )/    --###  ###    ###   ###  ###   ###  ######    ### ######
+   //////   ' \/ `   --#######     #########  ###   ###  ###       ###  #####
+  //// / // :    :   -###   ###   ###   ###    ######   ####      ###   ####
+ // /   /  /`    '---###    ###  ###   ###      ###    ########  ###    ###
+//          //..\
+===========UU====UU=============================================================
+           '//||\`
+             ''``
+    
+
+Copyright 2017 Battelle Energy Alliance, LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+  
+RAVEN Python dependencies located and checked.
+(    1.07 sec) SIMULATION               : Message         -> Simulation started at 2020-11-10 09:34:28
+(    1.07 sec) SIMULATION               : Message         -> Global verbosity level is " debug "
+(    1.07 sec) VariableGroup            : DEBUG           -> Variable group "GRO_outer_results" includes: mean_NPV,std_NPV,med_NPV,max_NPV,min_NPV,perc_5_NPV,perc_95_NPV,samp_NPV,var_NPV
+(    1.07 sec) VariableGroup            : DEBUG           -> Variable group "GRO_capacities" includes: AR_capacity,Coal_capacity,e_grid_capacity,sink_capacity
+(    1.07 sec) SIMULATION               : DEBUG           -> -- Reading the block: RunInfo        --
+(    1.07 sec) SIMULATION               : DEBUG           -> -- Reading the block: Steps          --
+(    1.07 sec) SIMULATION               : DEBUG           -> Reading type MultiRun with name sweep
+(    1.07 sec) STEP MULTIRUN            : DEBUG           -> move this tests to base class when it is ready for all the classes
+(    1.07 sec) STEP MULTIRUN            : DEBUG           -> the mapping used in the model for checking the compatibility of usage should be more similar to self.parList to avoid the double mapping below FIXME
+(    1.07 sec) STEP MULTIRUN            : DEBUG           -> reactivate check on Input as soon as loadCsv gets out from the PostProcessor models!
+(    1.07 sec) STEP MULTIRUN            : DEBUG           -> ------Reading Completed for:
+(    1.07 sec) STEP MULTIRUN            : DEBUG           ->        Class          : MultiRun        from <class 'Steps.SingleRun'>
+(    1.07 sec) STEP MULTIRUN            : DEBUG           ->        Type           : MultiRun
+(    1.07 sec) STEP MULTIRUN            : DEBUG           ->        Name           : sweep
+(    1.07 sec) STEP MULTIRUN            : DEBUG           ->        Initialization Parameters:
+(    1.07 sec) STEP MULTIRUN            : DEBUG           ->        Sleep time     : 0.005
+(    1.07 sec) STEP MULTIRUN            : DEBUG           ->        Initial seed   : None
+(    1.07 sec) STEP MULTIRUN            : DEBUG           ->        Input          : Class: Files Type:   Global name: transfers
+(    1.07 sec) STEP MULTIRUN            : DEBUG           ->        Model          : Class: Models Type: Code  Global name: raven
+(    1.07 sec) STEP MULTIRUN            : DEBUG           ->        Sampler        : Class: Samplers Type: Grid  Global name: grid
+(    1.07 sec) STEP MULTIRUN            : DEBUG           ->        Output         : Class: OutStreams Type: Print  Global name: sweep
+(    1.07 sec) STEP MULTIRUN            : DEBUG           ->        Current Setting:
+(    1.07 sec) SIMULATION               : DEBUG           -> -- Reading the block: DataObjects    --
+(    1.07 sec) SIMULATION               : DEBUG           -> Reading type PointSet with name grid
+(    1.07 sec) PointSet                 : DEBUG           -> Replaced text in <Input> with variable group "GRO_capacities"
+(    1.07 sec) PointSet                 : DEBUG           -> Replaced text in <Output> with variable group "GRO_outer_results"
+InputData: Using param spec "DataSet" to read XML node "PointSet.
+(    1.07 sec) PointSet                 : DEBUG           -> ------Reading Completed for:
+(    1.07 sec) PointSet                 : DEBUG           ->        Class          : PointSet        from <class 'DataObjects.DataSet.DataSet'>
+(    1.07 sec) PointSet                 : DEBUG           ->        Type           : PointSet
+(    1.07 sec) PointSet                 : DEBUG           ->        Name           : grid
+(    1.07 sec) PointSet                 : DEBUG           ->        Initialization Parameters:
+(    1.07 sec) PointSet                 : DEBUG           ->        Current Setting:
+(    1.07 sec) SIMULATION               : DEBUG           -> -- Reading the block: Models         --
+(    1.07 sec) SIMULATION               : DEBUG           -> Reading type Code with name raven
+(            ) UTILS                    : Message         -> importing module /home/prism/repos/HERON/tests/integration_tests/min_demand/write_inner.py
+(    1.08 sec) Code                     : DEBUG           -> ------Reading Completed for:
+(    1.08 sec) Code                     : DEBUG           ->        Class          : Code            from <class 'Models.Model.Model'>
+(    1.08 sec) Code                     : DEBUG           ->        Type           : Code
+(    1.08 sec) Code                     : DEBUG           ->        Name           : raven
+(    1.08 sec) Code                     : DEBUG           ->        Initialization Parameters:
+(    1.08 sec) Code                     : DEBUG           ->        subType        : RAVEN
+(    1.08 sec) Code                     : DEBUG           ->        The model input variable Samplers|MonteCarlo@name:mc_arma_dispatch|constant@name:denoises is filled using the framework variable : denoises
+(    1.08 sec) Code                     : DEBUG           ->        The model input variable Samplers|MonteCarlo@name:mc_arma_dispatch|constant@name:AR_capacity is filled using the framework variable : AR_capacity
+(    1.08 sec) Code                     : DEBUG           ->        The model input variable Samplers|MonteCarlo@name:mc_arma_dispatch|constant@name:Coal_capacity is filled using the framework variable : Coal_capacity
+(    1.08 sec) Code                     : DEBUG           ->        The model input variable Samplers|MonteCarlo@name:mc_arma_dispatch|constant@name:e_grid_capacity is filled using the framework variable : e_grid_capacity
+(    1.08 sec) Code                     : DEBUG           ->        The model input variable Samplers|MonteCarlo@name:mc_arma_dispatch|constant@name:sink_capacity is filled using the framework variable : sink_capacity
+(    1.08 sec) Code                     : DEBUG           ->        executable     : /home/prism/repos/raven/raven_framework
+(    1.08 sec) Code                     : DEBUG           ->        Current Setting:
+(    1.08 sec) Code                     : DEBUG           ->        current working directory: 
+(    1.08 sec) Code                     : DEBUG           ->        current output file root: 
+(    1.08 sec) Code                     : DEBUG           ->        current input file: []
+(    1.08 sec) Code                     : DEBUG           ->        original input file: []
+(    1.08 sec) SIMULATION               : DEBUG           -> -- Reading the block: Distributions  --
+(    1.08 sec) DISTRIBUTIONS            : DEBUG           -> ------Reading Completed for:
+(    1.08 sec) DISTRIBUTIONS            : DEBUG           ->        Class          : Uniform         from <class 'Distributions.BoostDistribution'>
+(    1.08 sec) DISTRIBUTIONS            : DEBUG           ->        Type           : Uniform
+(    1.08 sec) DISTRIBUTIONS            : DEBUG           ->        Name           : Coal_capacity_dist
+(    1.08 sec) DISTRIBUTIONS            : DEBUG           ->        Initialization Parameters:
+(    1.08 sec) DISTRIBUTIONS            : DEBUG           ->        upperBoundUsed : True
+(    1.08 sec) DISTRIBUTIONS            : DEBUG           ->        lowerBoundUsed : True
+(    1.08 sec) DISTRIBUTIONS            : DEBUG           ->        hasInfiniteBound: False
+(    1.08 sec) DISTRIBUTIONS            : DEBUG           ->        upperBound     : 2000.0
+(    1.08 sec) DISTRIBUTIONS            : DEBUG           ->        lowerBound     : 1750.0
+(    1.08 sec) DISTRIBUTIONS            : DEBUG           ->        adjustmentType : 
+(    1.08 sec) DISTRIBUTIONS            : DEBUG           ->        dimensionality : 1
+(    1.08 sec) DISTRIBUTIONS            : DEBUG           ->        messageHandler : <MessageHandler.MessageHandler object at 0x7f94fec153d0>
+(    1.08 sec) DISTRIBUTIONS            : DEBUG           ->        range          : 250.0
+(    1.08 sec) DISTRIBUTIONS            : DEBUG           ->        Current Setting:
+(    1.08 sec) SIMULATION               : DEBUG           -> -- Reading the block: Samplers       --
+(    1.08 sec) SIMULATION               : DEBUG           -> Reading type Grid with name grid
+(    1.08 sec) Grid                     : DEBUG           -> ------Reading Completed for:
+(    1.08 sec) Grid                     : DEBUG           ->        Class          : Grid            from <class 'Samplers.ForwardSampler.ForwardSampler'>
+(    1.08 sec) Grid                     : DEBUG           ->        Type           : Grid
+(    1.08 sec) Grid                     : DEBUG           ->        Name           : grid
+(    1.08 sec) Grid                     : DEBUG           ->        Initialization Parameters:
+(    1.08 sec) Grid                     : DEBUG           ->        sampled variable: Coal_capacity: is sampled using the distribution Coal_capacity_dist
+(    1.08 sec) Grid                     : DEBUG           ->        limit          : 1
+(    1.08 sec) Grid                     : DEBUG           ->        initial seed   : 1749605806
+(    1.08 sec) Grid                     : DEBUG           ->        Coal_capacity is sampled using a grid in : value
+(    1.08 sec) Grid                     : DEBUG           ->        Current Setting:
+(    1.08 sec) Grid                     : DEBUG           ->        counter        : 0
+(    1.08 sec) Grid                     : DEBUG           ->        initial seed   : 1749605806
+(    1.08 sec) Grid                     : DEBUG           ->        SampledVarsPb  : {}
+(    1.08 sec) Grid                     : DEBUG           ->        crowDist       : {}
+(    1.08 sec) SIMULATION               : DEBUG           -> -- Reading the block: Files          --
+(    1.08 sec) SIMULATION               : DEBUG           -> Reading type Input with name inner_workflow
+(    1.08 sec) raven File               : DEBUG           -> ------Reading Completed for:
+(    1.08 sec) raven File               : DEBUG           ->        Class          : UserGenerated   from <class 'Files.File'>
+(    1.08 sec) raven File               : DEBUG           ->        Type           : raven
+(    1.08 sec) raven File               : DEBUG           ->        Name           : inner_workflow
+(    1.08 sec) raven File               : DEBUG           ->        Initialization Parameters:
+(    1.08 sec) raven File               : DEBUG           ->        Current Setting:
+(    1.08 sec) SIMULATION               : DEBUG           -> Reading type Input with name heron_lib
+(    1.08 sec) UserGenerated File       : DEBUG           -> ------Reading Completed for:
+(    1.08 sec) UserGenerated File       : DEBUG           ->        Class          : UserGenerated   from <class 'Files.File'>
+(    1.08 sec) UserGenerated File       : DEBUG           ->        Type           : UserGenerated
+(    1.08 sec) UserGenerated File       : DEBUG           ->        Name           : heron_lib
+(    1.08 sec) UserGenerated File       : DEBUG           ->        Initialization Parameters:
+(    1.08 sec) UserGenerated File       : DEBUG           ->        Current Setting:
+(    1.08 sec) SIMULATION               : DEBUG           -> Reading type Input with name transfers
+(    1.08 sec) UserGenerated File       : DEBUG           -> ------Reading Completed for:
+(    1.08 sec) UserGenerated File       : DEBUG           ->        Class          : UserGenerated   from <class 'Files.File'>
+(    1.08 sec) UserGenerated File       : DEBUG           ->        Type           : UserGenerated
+(    1.08 sec) UserGenerated File       : DEBUG           ->        Name           : transfers
+(    1.08 sec) UserGenerated File       : DEBUG           ->        Initialization Parameters:
+(    1.08 sec) UserGenerated File       : DEBUG           ->        Current Setting:
+(    1.08 sec) SIMULATION               : DEBUG           -> -- Reading the block: OutStreams     --
+(    1.08 sec) SIMULATION               : DEBUG           -> Reading type Print with name sweep
+InputData: Using param spec "BaseType" to read XML node "Print.
+(    1.08 sec) OUTSTREAM PRINT          : DEBUG           -> ------Reading Completed for:
+(    1.08 sec) OUTSTREAM PRINT          : DEBUG           ->        Class          : FilePrint       from <class 'OutStreams.OutStreamBase.OutStreamBase'>
+(    1.08 sec) OUTSTREAM PRINT          : DEBUG           ->        Type           : Print
+(    1.08 sec) OUTSTREAM PRINT          : DEBUG           ->        Name           : sweep
+(    1.08 sec) OUTSTREAM PRINT          : DEBUG           ->        Initialization Parameters:
+(    1.08 sec) OUTSTREAM PRINT          : DEBUG           ->        Global Class Type                 : OutStreamManager
+(    1.08 sec) OUTSTREAM PRINT          : DEBUG           ->        Specialized Class Type            : Print
+(    1.08 sec) OUTSTREAM PRINT          : DEBUG           ->        Overwrite output everytime called : True
+(    1.08 sec) OUTSTREAM PRINT          : DEBUG           ->        Source Name 0 :: grid
+(    1.08 sec) OUTSTREAM PRINT          : DEBUG           ->        Current Setting:
+(    1.08 sec) SIMULATION               : DEBUG           -> Moving to working directory: /home/prism/repos/HERON/tests/integration_tests/min_demand/Sizing_o
+(    1.08 sec) Job Handler              : DEBUG           -> Setting maxQueueSize to 1
+(    1.08 sec) SIMULATION               : DEBUG           -> entering the run
+(    1.08 sec) SIMULATION               : Message         -> -- Beginning step sweep of type: MultiRun                           --
+(    1.08 sec) STEP MULTIRUN            : Message         -> ***  Beginning initialization ***
+(    1.08 sec) STEP MULTIRUN            : DEBUG           -> jobHandler initialized
+(    1.08 sec) STEP MULTIRUN            : Warning         -> current working dir /home/prism/repos/HERON/tests/integration_tests/min_demand/Sizing_o/sweep already exists, this might imply deletion of present files
+(    1.09 sec) STEP MULTIRUN            : DEBUG           -> for the role Model  the item of class Code            and name raven           has been initialized
+(    1.09 sec) STEP MULTIRUN            : DEBUG           -> for the role Output the item of class PointSet        and name grid            has been initialized
+(    1.09 sec) STEP MULTIRUN            : DEBUG           -> for the role Output the item of class Print           and name sweep           has been initialized
+(    1.09 sec) Grid                     : Message         -> No restart for Grid
+(    1.09 sec) GRID ENTITY              : Message         -> Starting initialization of grid 
+(    1.09 sec) GRID ENTITY              : Message         -> Grid initialized...
+(    1.09 sec) STEP MULTIRUN            : DEBUG           -> for the role of sampler the item of class Grid and name grid has been initialized
+(    1.09 sec) STEP MULTIRUN            : DEBUG           -> Sampler initialization dictionary: {'externalSeeding': None}
+(    1.09 sec) STEP MULTIRUN            : DEBUG           -> Generating input batch of size 1
+(    1.09 sec) Grid                     : DEBUG           ->  ... Sample point 1: {'Coal_capacity': 1750.0, 'denoises': 3, 'AR_capacity': 1000.0, 'e_grid_capacity': -2500.0, 'sink_capacity': -1000000.0}
+(    1.09 sec) Code                     : Message         -> job "1" submitted!
+(    1.09 sec) STEP MULTIRUN            : DEBUG           -> Submitted input 1
+(    1.09 sec) STEP MULTIRUN            : Message         -> ***    Initialization done    ***
+(    1.09 sec) STEP MULTIRUN            : Message         -> ***       Beginning run       ***
+(            ) UTILS                    : Message         -> importing module /home/prism/repos/HERON/tests/integration_tests/min_demand/write_inner.py
+current working dir /home/prism/repos/HERON/tests/integration_tests/min_demand/Sizing_o/sweep/1/Sizing_i
+already exists, this might imply deletion of present files
+current working dir /home/prism/repos/HERON/tests/integration_tests/min_demand/Sizing_o/sweep/1/Sizing_i
+already exists, this might imply deletion of present files
+(    1.11 sec) Code                     : Message         -> Execution command submitted:  /home/prism/repos/raven/raven_framework inner.xml 
+DEBUGG command: | /home/prism/repos/raven/raven_framework inner.xml |
+InputData: Using param spec "DataSet" to read XML node "PointSet.
+(    5.14 sec) STEP MULTIRUN            : DEBUG           -> Just collected job    1     and sent to output "grid"
+(    5.16 sec) PointSet                 : DEBUG           -> Had an issue with setting scaling factors for variable "prefix". No big deal.
+(    5.16 sec) PointSet                 : DEBUG           -> Printing data from "grid" to CSV: "sweep.csv"
+(    5.17 sec) PointSet                 : DEBUG           -> Printing metadata XML: "sweep.xml"
+(    5.17 sec) STEP MULTIRUN            : DEBUG           -> Just collected job    1     and sent to output "sweep"
+(    5.17 sec) STEP MULTIRUN            : DEBUG           -> Testing if the sampler is ready to generate a new input
+(    5.17 sec) Grid                     : DEBUG           -> Sampling limit reached!
+(    5.17 sec) Grid                     : DEBUG           ->  ... Sample point 2: {'Coal_capacity': 2000.0, 'denoises': 3, 'AR_capacity': 1000.0, 'e_grid_capacity': -2500.0, 'sink_capacity': -1000000.0}
+(    5.17 sec) Code                     : Message         -> job "2" submitted!
+(            ) UTILS                    : Message         -> importing module /home/prism/repos/HERON/tests/integration_tests/min_demand/write_inner.py
+current working dir /home/prism/repos/HERON/tests/integration_tests/min_demand/Sizing_o/sweep/2/Sizing_i
+already exists, this might imply deletion of present files
+current working dir /home/prism/repos/HERON/tests/integration_tests/min_demand/Sizing_o/sweep/2/Sizing_i
+already exists, this might imply deletion of present files
+(    5.19 sec) Code                     : Message         -> Execution command submitted:  /home/prism/repos/raven/raven_framework inner.xml 
+DEBUGG command: | /home/prism/repos/raven/raven_framework inner.xml |
+InputData: Using param spec "DataSet" to read XML node "PointSet.
+(    9.18 sec) STEP MULTIRUN            : DEBUG           -> Just collected job    2     and sent to output "grid"
+(    9.21 sec) PointSet                 : DEBUG           -> Had an issue with setting scaling factors for variable "prefix". No big deal.
+(    9.21 sec) PointSet                 : DEBUG           -> Printing data from "grid" to CSV: "sweep.csv"
+(    9.21 sec) PointSet                 : DEBUG           -> Printing metadata XML: "sweep.xml"
+(    9.22 sec) STEP MULTIRUN            : DEBUG           -> Just collected job    2     and sent to output "sweep"
+(    9.22 sec) STEP MULTIRUN            : DEBUG           -> Testing if the sampler is ready to generate a new input
+(    9.22 sec) Grid                     : DEBUG           -> Sampling limit reached! No new samples ...
+(    9.22 sec) STEP MULTIRUN            : DEBUG           ->  ... sampler has no new inputs currently.
+(    9.22 sec) Grid                     : DEBUG           -> Sampling limit reached! No new samples ...
+(    9.22 sec) STEP MULTIRUN            : DEBUG           -> Sampling finished with 2 runs submitted, 0 jobs running, and 0 completed jobs waiting to be processed.
+(    9.22 sec) Grid                     : DEBUG           -> ===============
+(    9.22 sec) Grid                     : DEBUG           -> | RUN SUMMARY |
+(    9.22 sec) Grid                     : DEBUG           -> ===============
+(    9.22 sec) Grid                     : DEBUG           -> All runs completed without returning errors.
+(    9.22 sec) Grid                     : DEBUG           -> ===============
+(    9.22 sec) Grid                     : DEBUG           ->   END SUMMARY  
+(    9.22 sec) Grid                     : DEBUG           -> ===============
+(    9.22 sec) STEP MULTIRUN            : Message         -> ***       Run finished        ***
+(    9.22 sec) STEP MULTIRUN            : Message         -> ***     Closing the step      ***
+(    9.22 sec) STEP MULTIRUN            : Message         -> ***        Step closed        ***
+(    9.22 sec) SIMULATION               : Message         -> -- End step sweep of type: MultiRun                            --
+
+--------------------------------------------------
+There were 1 warnings during the simulation run:
+(1 time) current working dir /home/prism/repos/HERON/tests/integration_tests/min_demand/Sizing_o/sweep already exists, this might imply deletion of present files
+--------------------------------------------------
+(    9.22 sec) SIMULATION               : Message         -> Run complete!
