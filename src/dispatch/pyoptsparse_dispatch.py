@@ -115,8 +115,10 @@ class PyOptSparse(Dispatcher):
 
     # Dispatch using Chickadee
     dispatcher = chickadee.PyOptSparse()
-    opt_dispatch = dispatcher.dispatch(ch_comps, time_horizon, meta=meta,
+    solution = dispatcher.dispatch(ch_comps, time_horizon, meta=meta,
                                         external_obj_func=objective)
 
     # Convert Chickadee dispatch back to HERON dispatch for return
-    return convert_dispatch(opt_dispatch, resource_map, comp_map)
+    solution_dispatch = chickadee.DispatchState(ch_comps, time_horizon)
+    solution_dispatch.state = solution.dispatch
+    return convert_dispatch(solution_dispatch, resource_map, comp_map)
