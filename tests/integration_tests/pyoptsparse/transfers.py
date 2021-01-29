@@ -21,19 +21,8 @@ def electric_consume(data, meta):
   data = {'driver': amount}
   return data, meta
 
-def generator(data, meta):
-  effciency = 0.7 # Just a random guess at a turbine efficiency
-
-  if 'steam' in data:
-    # Determine the electricity output for a given steam input
-    data['electricity'] = -1 * effciency * data['steam']
-  elif 'electricity' in data:
-    # Determine the steam input for a given electricity output
-    data['steam'] = -1/effciency * data['electricity']
-  else:
-    raise Exception("Generator Transfer Function: Neither 'electricity' nor 'steam' given")
-
-  return data, meta
+def generator(inputs):
+  return {'steam': -1 / 0.7 * inputs}
 
 
 def flex_price(data, meta):

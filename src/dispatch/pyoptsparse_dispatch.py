@@ -39,19 +39,22 @@ def convert_dispatch(ch_dispatch: chickadee.DispatchState, resource_map: dict,
   # Copy over all the activities
   for c, data in ch_dispatch.state.items():
     for res, values in data.items():
+      print('len check', c, res, len(ch_dispatch.time), len(values))
       np_dispatch.set_activity_vector(component_map[c], res,
               start_i, end_i, values)
 
   return np_dispatch
 
 def generate_transfer(comp, sources, dt):
+  print('Making transfer for', comp.name)
   interaction = comp.get_interaction()
-  if interaction.tag == 'stores':
-    def transfer(data, meta):
-      return interaction.produce(data, meta, sources, None, None, dt)
-  else:
-    def transfer(data, meta):
-      return interaction.produce(data, meta, sources, None, None)
+  thing = interaction._transfer
+  if thing is None:
+    # For components that don't actually transfer, HERON never loads the functions
+    return lambda x: {}
+  # We really need to dig for this one, but it lets us determine our own
+  # function signatures for the transfer functions by bypassing the HERON interfaces
+  transfer = interaction._transfer._obj._module_methods[thing._sub_name]
   return transfer
 
 class PyOptSparse(Dispatcher):
@@ -87,6 +90,8 @@ class PyOptSparse(Dispatcher):
     ch_comps = []
     comp_map = {}
     for c in components:
+      tf = c.get_interaction()._transfer
+      print(c.name, type(tf), dir(tf))
       capacity_var = c.get_capacity_var()
       cap = c.get_capacity(meta)[0][capacity_var]
       capacity = np.ones(len(time_horizon)) * cap
@@ -109,6 +114,7 @@ class PyOptSparse(Dispatcher):
 
     # Make the objective function
     def objective(dispatchState: chickadee.DispatchState):
+      print(len(dispatchState.time), {key: { res: len(d) for res, d in dispatchState.state[key].items()}for key in dispatchState.state.keys()})
       np_dispatch = convert_dispatch(dispatchState, resource_map, comp_map)
       return self._compute_cashflows(components, np_dispatch,
                                       dispatchState.time, meta)
