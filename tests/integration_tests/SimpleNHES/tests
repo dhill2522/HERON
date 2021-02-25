@@ -1,7 +1,0 @@
-[Tests]
-  [./pyoptsparse]
-    type = HeronIntegration
-    input = heron_input.xml
-  [../]
-
-[]

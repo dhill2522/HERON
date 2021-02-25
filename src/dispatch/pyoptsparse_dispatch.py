@@ -39,19 +39,25 @@ def convert_dispatch(ch_dispatch: chickadee.DispatchState, resource_map: dict,
   # Copy over all the activities
   for c, data in ch_dispatch.state.items():
     for res, values in data.items():
-      print('len check', c, res, len(ch_dispatch.time), len(values))
       np_dispatch.set_activity_vector(component_map[c], res,
               start_i, end_i, values)
 
   return np_dispatch
 
 def generate_transfer(comp, sources, dt):
-  print('Making transfer for', comp.name)
   interaction = comp.get_interaction()
-  thing = interaction._transfer
-  if thing is None:
-    # For components that don't actually transfer, HERON never loads the functions
-    return lambda x: {}
+  if comp._stores:
+    # For storage components there is no transfer, so the transfer method is attached to the 
+    # rate node instead.
+    transfer = interaction._rate._obj._module_methods[interaction._rate._sub_name]
+    if transfer is None:
+      raise Exception(f'A Storage component ({comp.name}) cannot be defined without a transfer function when using the Chickadee dispatcher.')
+    return transfer
+  else:
+    thing = interaction._transfer
+    if thing is None:
+      # For components that don't actually transfer, HERON never loads the functions
+      return lambda x: {}
   # We really need to dig for this one, but it lets us determine our own
   # function signatures for the transfer functions by bypassing the HERON interfaces
   transfer = interaction._transfer._obj._module_methods[thing._sub_name]
@@ -91,11 +97,9 @@ class PyOptSparse(Dispatcher):
     comp_map = {}
     for c in components:
       tf = c.get_interaction()._transfer
-      print(c.name, type(tf), dir(tf))
       capacity_var = c.get_capacity_var()
       cap = c.get_capacity(meta)[0][capacity_var]
       capacity = np.ones(len(time_horizon)) * cap
-      print(list(c.get_outputs()), list(c.get_inputs()), c._stores)
       ch_comp = chickadee.PyOptSparseComponent(
         c.name,
         capacity,
@@ -106,7 +110,9 @@ class PyOptSparse(Dispatcher):
         None, # External cost function is used
         produces=list(c.get_outputs()),
         consumes=list(c.get_inputs()),
-        stores=c._stores[0] if c._stores else None,
+        # It turns out c._stores only holds a <HERON Storage> object,
+        # so we get the resource from the inputs
+        stores=list(c.get_inputs())[0] if c._stores else None,
         dispatch_type=c.is_dispatchable()
       )
       ch_comps.append(ch_comp)
@@ -114,13 +120,14 @@ class PyOptSparse(Dispatcher):
 
     # Make the objective function
     def objective(dispatchState: chickadee.DispatchState):
-      print(len(dispatchState.time), {key: { res: len(d) for res, d in dispatchState.state[key].items()}for key in dispatchState.state.keys()})
+    #print(len(dispatchState.time), {key: { res: len(d) for res, d in dispatchState.state[key].items()}for key in dispatchState.state.keys()})
       np_dispatch = convert_dispatch(dispatchState, resource_map, comp_map)
       return self._compute_cashflows(components, np_dispatch,
                                       dispatchState.time, meta)
 
     # Dispatch using Chickadee
     dispatcher = chickadee.PyOptSparse()
+    print('Chickadee components:', ch_comps)
     solution = dispatcher.dispatch(ch_comps, time_horizon, meta=meta,
                                         external_obj_func=objective)
 

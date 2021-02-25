@@ -1,22 +1,22 @@
 <HERON>
   <TestInfo>
-    <name>production</name>
-    <author>sexydrew</author>
-    <created>2020-06-15</created>
+    <name>storage</name>
+    <author>talbpaul</author>
+    <created>2020-09-28</created>
     <description>
-      I am pretty sure that this is changing the npp to meet the arma
-      trained on the caiso grid. 
+      Tests including a storage unit as part of a flexible analysis case. Extends from
+      production\_flex case.
     </description>
     <classesTested>HERON</classesTested>
   </TestInfo>
 
   <Case name="Sweep_Runs">
     <mode>sweep</mode>
-    <num_arma_samples>4</num_arma_samples>
+    <num_arma_samples>3</num_arma_samples>
     <time_discretization>
       <time_variable>Time</time_variable>
-      <end_time>2</end_time>
-      <num_steps>21</num_steps> <!--Need to change based on arma-->
+      <end_time>359</end_time>
+      <num_steps>360</num_steps>
     </time_discretization>
     <economics>
       <ProjectTime>3</ProjectTime>
@@ -27,98 +27,67 @@
     </economics>
     <dispatcher>
       <pyoptsparse/>
+      <!-- <pyomo/> -->
     </dispatcher>
   </Case>
 
   <Components>
     <Component name="npp">
-      <produces resource="steam" dispatch="independent">
+      <produces resource="steam" dispatch="fixed">
         <capacity resource="steam">
-          <sweep_values>26000,22000</sweep_values>
-          <!-- <opt_bounds>2222.2,22222.2</opt_bounds> -->
+          <sweep_values>26000, 22000</sweep_values>
         </capacity>
-        <!-- <transfer>
-          <Function method="power_conversion">transfers</Function>
-        </transfer> -->
       </produces>
       <economics>
         <lifetime>27</lifetime>
       </economics>
     </Component>
 
-    <Component name="turbine">
-      <produces resource="electricity" dispatch="dependent">
-        <consumes>steam</consumes>
-        <capacity resource="steam">
-          <fixed_value>-1e10</fixed_value>
-        </capacity>
-        <transfer>
-          <linear>
-            <rate resource="steam">-1</rate>
-            <rate resource="electricity">0.5</rate>
-          </linear>
-        </transfer>
-        <!-- <transfer>
-          <Function method="turb_conversion">transfers</Function>
-        </transfer> -->
-      </produces>
-      <economics>
-        <lifetime>27</lifetime>
-        <!--<CashFlow name="var_om" type="repeating" taxable='True' inflation='none' mult_target='False'>
-          <driver>
-            <resource>electricity</resource>
-            <Function method="steam_consume">transfers</Function>
-          </driver>
-          <reference_price>
-            <fixed_value>0.01</fixed_value>
-          </reference_price>
-        </CashFlow>-->
-      </economics>
-    </Component>
-
-    <Component name="electr_market">
-      <demands resource="electricity" dispatch="dependent">
-        <capacity>
-          <!-- <fixed_value>-2</fixed_value> -->
-          <fixed_value>0</fixed_value>
-        </capacity>
-      </demands>
-      <economics>
-        <lifetime>30</lifetime>
-        <CashFlow name="e_sales" type="repeating" taxable='True' inflation='none' mult_target='False'>
-          <driver>
-            <Function method="electric_consume">transfers</Function>
-            <!-- <resource multiplier="-1" absolute="True">electricity</resource> -->
-          </driver>
-          <reference_price>
-            <fixed_value>0.5</fixed_value>
-          </reference_price>
-        </CashFlow>
-      </economics>
-    </Component>
-
-   <Component name="TES">
+    <Component name="tes">
       <stores resource="steam" dispatch="independent">
-	      <capacity resource="steam">
+        <capacity resource="steam">
           <fixed_value>5e9</fixed_value>
         </capacity>
         <rate>
-          <fixed_value>5e8</fixed_value>
+          <!-- <fixed_value>5e8</fixed_value> -->
+          <Function method='tes'>transfers</Function>
         </rate>
         <initial_stored>
           <fixed_value>500</fixed_value>
         </initial_stored>
       </stores>
+      <!-- <transfer>
+      </transfer> -->
+      <economics>
+        <lifetime>10</lifetime>
+      </economics>
+    </Component>
+
+    <Component name="turbine">
+      <produces resource="electricity" dispatch="independent">
+        <consumes>steam</consumes>
+        <capacity resource="steam">
+
+          <fixed_value>-1e10</fixed_value>
+        </capacity>
+        <transfer>
+          <!--<linear>
+            <rate resource="steam">-1</rate>
+            <rate resource="electricity">0.5</rate>
+          </linear>-->
+          <Function method="generator">transfers</Function>
+        </transfer>
+      </produces>
       <economics>
         <lifetime>27</lifetime>
       </economics>
     </Component>
 
     <Component name="electr_flex">
-      <demands resource="electricity" dispatch="independent">
+      <demands resource="electricity" dispatch="dependent">
         <capacity>
           <!-- <ARMA variable="Signal">Load</ARMA> -->
-          <fixed_value>-1e2</fixed_value>
+          <fixed_value>-1e200</fixed_value>
         </capacity>
       </demands>
       <economics>
@@ -137,7 +106,8 @@
   </Components>
 
   <DataGenerators>
-    <ARMA name='Price' variable="Signal">arma1.pk</ARMA>
+    <ARMA name='Price' variable="Signal">lmp.pk</ARMA>
+    <!-- <ARMA name='Load' variable="Signal">net_Load.pk</ARMA> -->
     <Function name="transfers">transfers.py</Function>
   </DataGenerators>
 
