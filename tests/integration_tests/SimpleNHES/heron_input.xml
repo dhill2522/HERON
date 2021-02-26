@@ -19,7 +19,7 @@
       <num_steps>360</num_steps>
     </time_discretization>
     <economics>
-      <ProjectTime>3</ProjectTime>
+      <ProjectTime>1</ProjectTime>
       <DiscountRate>0.08</DiscountRate>
       <tax>0.0</tax>
       <inflation>0.0</inflation>
