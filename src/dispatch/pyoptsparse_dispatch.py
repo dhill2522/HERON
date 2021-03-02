@@ -88,6 +88,8 @@ class PyOptSparse(Dispatcher):
     """
     # Get the right time horizon
     time_horizon = np.linspace(*self.get_time_discr())
+    # This is needed for HERON to pull handle the ARMAs properly later on
+    meta['HERON']['time_index'] = slice(0, len(time_horizon)) 
     dt = time_horizon[1] - time_horizon[0]
 
     resource_map = meta['HERON']['resource_indexer']
@@ -98,6 +100,7 @@ class PyOptSparse(Dispatcher):
     for c in components:
       tf = c.get_interaction()._transfer
       capacity_var = c.get_capacity_var()
+      print(c.name, capacity_var)
       cap = c.get_capacity(meta)[0][capacity_var]
       capacity = np.ones(len(time_horizon)) * cap
       ch_comp = chickadee.PyOptSparseComponent(
@@ -127,7 +130,6 @@ class PyOptSparse(Dispatcher):
 
     # Dispatch using Chickadee
     dispatcher = chickadee.PyOptSparse()
-    print('Chickadee components:', ch_comps)
     solution = dispatcher.dispatch(ch_comps, time_horizon, meta=meta,
                                         external_obj_func=objective)
 
